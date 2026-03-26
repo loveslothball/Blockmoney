@@ -1,6 +1,6 @@
 (() => {
   const G = window.BeanGame;
-  const { COLORS, COLOR_KEYS, LEADERBOARD_KEY, SIZE } = G.constants;
+  const { COLORS, COLOR_KEYS, LEADERBOARD_KEY, COLLECT_SIZE } = G.constants;
   const { app, refs } = G;
 
   function updateRunStats() {
@@ -141,9 +141,11 @@
   }
 
   function drawMini(gridEl) {
+    const size = app.targetMap.length;
+    gridEl.style.setProperty("--grid-size", size);
     gridEl.innerHTML = "";
-    for (let r = 0; r < SIZE; r += 1) {
-      for (let c = 0; c < SIZE; c += 1) {
+    for (let r = 0; r < size; r += 1) {
+      for (let c = 0; c < size; c += 1) {
         const cell = document.createElement("div");
         cell.className = "mini-cell" + (app.targetMap[r][c] ? " fill" : "");
         if (app.targetMap[r][c]) cell.style.background = COLORS[app.targetMap[r][c]].hex;
@@ -177,10 +179,11 @@
   }
 
   function renderBoard(onCellTap) {
-    const fxMap = app.boardFx || Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+    refs.board.style.setProperty("--grid-size", COLLECT_SIZE);
+    const fxMap = app.boardFx || Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(0));
     refs.board.innerHTML = "";
-    for (let r = 0; r < SIZE; r += 1) {
-      for (let c = 0; c < SIZE; c += 1) {
+    for (let r = 0; r < COLLECT_SIZE; r += 1) {
+      for (let c = 0; c < COLLECT_SIZE; c += 1) {
         const color = app.board[r][c];
         const cell = document.createElement("button");
         cell.type = "button";
@@ -197,9 +200,15 @@
         if (color) {
           const bean = document.createElement("div");
           bean.className = "bean";
+          const special = app.specials?.[r]?.[c];
+          if (special) {
+            bean.classList.add("special");
+            bean.dataset.special = special;
+          }
           if (fxMap[r][c] > 0) {
             bean.classList.add("drop");
             bean.style.setProperty("--fall-distance", `${fxMap[r][c]}`);
+            bean.style.setProperty("--fall-delay", `${c * 18}ms`);
           }
           bean.style.background = COLORS[color].hex;
           cell.appendChild(bean);
@@ -207,13 +216,16 @@
         refs.board.appendChild(cell);
       }
     }
-    app.boardFx = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+    app.boardFx = Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(0));
   }
 
   function drawCraft(onCraftCell) {
+    const size = app.targetMap.length;
+    refs.craftGrid.style.setProperty("--grid-size", size);
+    refs.craftGrid.dataset.gridSize = String(size);
     refs.craftGrid.innerHTML = "";
-    for (let r = 0; r < SIZE; r += 1) {
-      for (let c = 0; c < SIZE; c += 1) {
+    for (let r = 0; r < size; r += 1) {
+      for (let c = 0; c < size; c += 1) {
         const target = app.targetMap[r][c];
         const placed = app.placed[r][c];
         const cell = document.createElement("button");

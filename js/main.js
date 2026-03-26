@@ -1,7 +1,7 @@
 (() => {
   const G = window.BeanGame;
   const { app, refs } = G;
-  const { COLOR_KEYS, COLORS } = G.constants;
+  const { COLOR_KEYS, COLORS, COLLECT_SIZE } = G.constants;
   const { generateTargetMap, initNeeded, levelStepLimit, levelCraftTime, isHardLevel } = G.utils;
   const { swap, findMatches, hasAnyMove, createBoard, collapse, isCollectDone, isCraftDone } = G.engine;
   const {
@@ -33,6 +33,50 @@
   function addScore(delta) {
     app.score += delta;
     updateRunStats();
+  }
+
+  function createCollectGrid(fill = null) {
+    return Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(fill));
+  }
+
+  function swapSpecials(a, b) {
+    const t = app.specials[a.r][a.c];
+    app.specials[a.r][a.c] = app.specials[b.r][b.c];
+    app.specials[b.r][b.c] = t;
+  }
+
+  function expandMatchesWithSpecials(matchCells) {
+    const mark = new Set(matchCells.map(({ r, c }) => `${r},${c}`));
+    matchCells.forEach(({ r, c }) => {
+      const special = app.specials[r][c];
+      if (special === "cross") {
+        for (let i = 0; i < COLLECT_SIZE; i += 1) {
+          mark.add(`${r},${i}`);
+          mark.add(`${i},${c}`);
+        }
+      }
+      if (special === "burst") {
+        for (let rr = Math.max(0, r - 1); rr <= Math.min(COLLECT_SIZE - 1, r + 1); rr += 1) {
+          for (let cc = Math.max(0, c - 1); cc <= Math.min(COLLECT_SIZE - 1, c + 1); cc += 1) {
+            mark.add(`${rr},${cc}`);
+          }
+        }
+      }
+    });
+    return Array.from(mark).map((key) => {
+      const [r, c] = key.split(",").map(Number);
+      return { r, c };
+    });
+  }
+
+  function pickSpecialReward(matchCells) {
+    if (matchCells.length < 4) return null;
+    const anchor = matchCells[Math.floor(matchCells.length / 2)];
+    return {
+      r: anchor.r,
+      c: anchor.c,
+      type: matchCells.length >= 5 ? "cross" : "burst"
+    };
   }
 
   function startCraftTimer() {
@@ -179,22 +223,28 @@
     let matches = initialMatches;
     let chain = 1;
     while (matches.length) {
+      const expandedMatches = expandMatchesWithSpecials(matches);
+      const reward = pickSpecialReward(expandedMatches);
       renderBoard(onCellTap);
-      markMatches(matches, chain);
+      markMatches(expandedMatches, chain);
       await new Promise((resolve) => setTimeout(resolve, 180));
-      sfxMatch(matches.length);
+      sfxMatch(expandedMatches.length);
       if (chain > 1) {
         sfxCombo(chain);
-        showCombo(chain, matches.length);
+        showCombo(chain, expandedMatches.length);
       }
-      await animateCollect(matches, chain);
-      matches.forEach(({ r, c }) => {
+      await animateCollect(expandedMatches, chain);
+      expandedMatches.forEach(({ r, c }) => {
         app.board[r][c] = null;
+        app.specials[r][c] = null;
       });
-      app.boardFx = Array.from({ length: G.constants.SIZE }, () => Array(G.constants.SIZE).fill(0));
+      app.boardFx = createCollectGrid(0);
       renderBoard(onCellTap);
       await new Promise((resolve) => setTimeout(resolve, 140));
-      app.boardFx = collapse(app.board);
+      app.boardFx = collapse(app.board, app.specials);
+      if (reward && app.board[reward.r]?.[reward.c]) {
+        app.specials[reward.r][reward.c] = reward.type;
+      }
       drawProgress();
       renderBoard(onCellTap);
       await new Promise((resolve) => setTimeout(resolve, 380));
@@ -231,12 +281,14 @@
     }
     app.locked = true;
     swap(app.board, app.selected, { r, c });
+    swapSpecials(app.selected, { r, c });
     app.steps -= 1;
     refs.stepText.textContent = app.steps;
     refs.timerText.textContent = `步数 ${app.steps}`;
     const matches = findMatches(app.board);
     if (!matches.length) {
       swap(app.board, app.selected, { r, c });
+      swapSpecials(app.selected, { r, c });
       app.selected = null;
       app.locked = false;
       toast("没有形成消除");
@@ -360,11 +412,13 @@
     const generated = generateTargetMap(app.level);
     app.targetMap = generated.map;
     app.currentAnimal = generated.animalName;
+    app.craftSize = generated.size;
     app.needed = initNeeded(app.targetMap);
     app.collected = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
     app.resources = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
-    app.boardFx = Array.from({ length: G.constants.SIZE }, () => Array(G.constants.SIZE).fill(0));
-    app.placed = Array.from({ length: G.constants.SIZE }, () => Array(G.constants.SIZE).fill(null));
+    app.boardFx = createCollectGrid(0);
+    app.specials = createCollectGrid(null);
+    app.placed = Array.from({ length: app.craftSize }, () => Array(app.craftSize).fill(null));
     app.activeColor = null;
     app.locked = false;
     refs.phaseLabel.textContent = `第${app.level}关${app.hardLevel ? " · 超难" : ""} · 收集豆子`;
@@ -396,8 +450,15 @@
 
     const introMs = showIntro ? 3000 : 1400;
     refs.introOverlay.classList.remove("hidden");
+    refs.introOverlay.classList.remove("outro");
+    refs.introOverlay.classList.add("intro-show");
     app.introOverlayTimer = setTimeout(() => {
-      refs.introOverlay.classList.add("hidden");
+      refs.introOverlay.classList.remove("intro-show");
+      refs.introOverlay.classList.add("outro");
+      setTimeout(() => {
+        refs.introOverlay.classList.add("hidden");
+        refs.introOverlay.classList.remove("outro");
+      }, 320);
     }, introMs);
     updateActionButtons();
   }

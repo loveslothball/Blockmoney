@@ -10,11 +10,11 @@
   };
 
   const COLOR_KEYS = Object.keys(COLORS);
-  const SIZE = 10;
+  const COLLECT_SIZE = 8;
   const START_STEPS = 28;
   const LEADERBOARD_KEY = "bean_game_leaderboard_v1";
 
-  const ANIMAL_MASKS = [
+  const BASE_MASKS = [
     {
       name: "猫咪",
       mask: [
@@ -92,6 +92,24 @@
     }
   ];
 
+  function resizeMask(mask, targetSize) {
+    const sourceSize = mask.length;
+    if (sourceSize === targetSize) return mask.map((row) => [...row]);
+    return Array.from({ length: targetSize }, (_, r) =>
+      Array.from({ length: targetSize }, (_, c) => {
+        const sr = Math.min(sourceSize - 1, Math.floor((r / targetSize) * sourceSize));
+        const sc = Math.min(sourceSize - 1, Math.floor((c / targetSize) * sourceSize));
+        return mask[sr][sc];
+      })
+    );
+  }
+
+  function chooseCraftSize(level) {
+    if (level >= 8) return 12;
+    if (level >= 4) return 10;
+    return 8;
+  }
+
   const app = {
     phase: "collect",
     level: 1,
@@ -103,13 +121,15 @@
     hardLevel: false,
     steps: START_STEPS,
     targetMap: [],
+    craftSize: 8,
     board: [],
-    boardFx: Array.from({ length: SIZE }, () => Array(SIZE).fill(0)),
+    boardFx: Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(0)),
+    specials: Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(null)),
     selected: null,
     needed: {},
     collected: {},
     resources: {},
-    placed: Array.from({ length: SIZE }, () => Array(SIZE).fill(null)),
+    placed: [],
     activeColor: null,
     craftTime: 48,
     craftTimer: null,
@@ -193,32 +213,35 @@
 
   function pickAnimal() {
     if (!app.animalQueue.length) {
-      app.animalQueue = shuffle(ANIMAL_MASKS);
+      app.animalQueue = shuffle(BASE_MASKS);
       if (app.animalQueue[0] && app.animalQueue[0].name === app.lastAnimal) {
         app.animalQueue.push(app.animalQueue.shift());
       }
     }
-    const chosen = app.animalQueue.shift() || ANIMAL_MASKS[0];
+    const chosen = app.animalQueue.shift() || BASE_MASKS[0];
     app.lastAnimal = chosen.name;
     return chosen;
   }
 
   function generateTargetMap(level) {
     const animal = pickAnimal();
-    const mask = animal.mask;
+    const targetSize = chooseCraftSize(level);
+    const mask = resizeMask(animal.mask, targetSize);
     const activeCount = Math.min(5, 3 + Math.floor((level - 1) / 2));
     const palette = shuffle(COLOR_KEYS).slice(0, activeCount);
-    const map = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
-    for (let r = 0; r < SIZE; r += 1) {
-      for (let c = 0; c < SIZE; c += 1) {
+    const map = Array.from({ length: targetSize }, () => Array(targetSize).fill(null));
+    for (let r = 0; r < targetSize; r += 1) {
+      for (let c = 0; c < targetSize; c += 1) {
         if (!mask[r][c]) continue;
-        const rowBand = Math.floor((r / SIZE) * activeCount);
-        const colBand = Math.floor((Math.min(c, SIZE - 1 - c) / Math.ceil(SIZE / 2)) * Math.max(1, activeCount - 1));
+        const rowBand = Math.floor((r / targetSize) * activeCount);
+        const colBand = Math.floor(
+          (Math.min(c, targetSize - 1 - c) / Math.ceil(targetSize / 2)) * Math.max(1, activeCount - 1)
+        );
         const zone = (rowBand + colBand + (level % activeCount)) % activeCount;
         map[r][c] = palette[zone];
       }
     }
-    return { map, animalName: animal.name };
+    return { map, animalName: animal.name, size: targetSize };
   }
 
   function initNeeded(targetMap) {
@@ -236,7 +259,8 @@
   function levelCraftTime(targetMap, hardLevel = false) {
     const filled = targetMap.flat().filter(Boolean).length;
     const activeColors = new Set(targetMap.flat().filter(Boolean)).size;
-    const base = 20 + Math.round(filled * 0.48) + activeColors * 2;
+    const gridSize = targetMap.length;
+    const base = 18 + Math.round(filled * 0.36) + activeColors * 2 + Math.max(0, gridSize - 8) * 5;
     return base + (hardLevel ? 8 : 0);
   }
 
@@ -247,10 +271,10 @@
   G.constants = {
     COLORS,
     COLOR_KEYS,
-    SIZE,
+    COLLECT_SIZE,
     START_STEPS,
     LEADERBOARD_KEY,
-    ANIMAL_MASKS
+    ANIMAL_MASKS: BASE_MASKS
   };
 
   G.app = app;
@@ -263,6 +287,7 @@
     initNeeded,
     levelStepLimit,
     levelCraftTime,
-    randomColor
+    randomColor,
+    chooseCraftSize
   };
 })();

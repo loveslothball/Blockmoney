@@ -6,7 +6,7 @@
     <title>拼豆猫</title>
     <style>
       :root {
-        --grid-size: 10;
+        --grid-size: 8;
         --phone-w: min(430px, 100vw);
         --phone-h: min(932px, 100dvh);
         --bg-1: #f5e6c8;
@@ -341,7 +341,39 @@
       }
 
       .bean.drop {
-        animation: beanDrop calc(150ms + var(--fall-distance, 1) * 70ms) cubic-bezier(0.2, 0.85, 0.25, 1) both;
+        animation: beanDrop calc(180ms + var(--fall-distance, 1) * 78ms) cubic-bezier(0.22, 0.88, 0.26, 1) var(--fall-delay, 0ms) both,
+          beanBounce 280ms ease-out calc(var(--fall-delay, 0ms) + 160ms + var(--fall-distance, 1) * 78ms) both;
+      }
+
+      .bean.special {
+        position: relative;
+        box-shadow:
+          inset -2px -2px 0 rgba(0, 0, 0, 0.15),
+          inset 2px 2px 0 rgba(255, 255, 255, 0.25),
+          0 0 0 2px rgba(255, 255, 255, 0.5),
+          0 0 18px rgba(255, 255, 255, 0.35);
+      }
+
+      .bean.special::after {
+        content: "";
+        position: absolute;
+        inset: 18%;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.72);
+        opacity: 0.88;
+      }
+
+      .bean.special[data-special="cross"]::after {
+        inset: 16%;
+        border-radius: 6px;
+        clip-path: polygon(40% 0, 60% 0, 60% 40%, 100% 40%, 100% 60%, 60% 60%, 60% 100%, 40% 100%, 40% 60%, 0 60%, 0 40%, 40% 40%);
+        background: rgba(255, 255, 255, 0.24);
+        border: 0;
+      }
+
+      .bean.special[data-special="burst"]::after {
+        inset: 12%;
+        border-style: dashed;
       }
 
       .cell.matching .bean {
@@ -377,6 +409,17 @@
         background: #e7eaf1;
         border-radius: 4px;
         padding: 8px;
+      }
+
+      .craft-grid[data-grid-size="10"] {
+        width: min(100%, 378px);
+        gap: 3px;
+      }
+
+      .craft-grid[data-grid-size="12"] {
+        width: min(100%, 400px);
+        gap: 2px;
+        padding: 6px;
       }
 
       .craft-cell {
@@ -519,6 +562,14 @@
         border-radius: 8px;
         padding: 18px;
         backdrop-filter: blur(10px);
+      }
+
+      .overlay.intro-show .overlay-card {
+        animation: introCardIn 520ms cubic-bezier(0.18, 0.9, 0.2, 1) both;
+      }
+
+      .overlay.outro .overlay-card {
+        animation: introCardOut 300ms ease-in forwards;
       }
 
       .overlay h2 {
@@ -922,6 +973,18 @@
         }
       }
 
+      @keyframes beanBounce {
+        0% {
+          transform: translateY(0) scale(1);
+        }
+        48% {
+          transform: translateY(-9%) scale(1.03, 0.98);
+        }
+        100% {
+          transform: translateY(0) scale(1);
+        }
+      }
+
       @keyframes comboBanner {
         0% {
           opacity: 0;
@@ -986,6 +1049,35 @@
         }
       }
 
+      @keyframes introCardIn {
+        0% {
+          opacity: 0;
+          transform: translateY(42px) scale(0.86);
+          filter: blur(8px);
+        }
+        62% {
+          opacity: 1;
+          transform: translateY(-4px) scale(1.02);
+          filter: blur(0);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          filter: blur(0);
+        }
+      }
+
+      @keyframes introCardOut {
+        0% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-18px) scale(0.96);
+        }
+      }
+
       @media (max-width: 420px) {
         body {
           padding: 0;
@@ -1037,6 +1129,15 @@
           width: min(100%, calc(100dvh - 420px));
           min-width: 0;
           gap: 2px;
+        }
+        .craft-grid[data-grid-size="10"] {
+          width: min(100%, calc(100dvh - 436px));
+          gap: 2px;
+        }
+        .craft-grid[data-grid-size="12"] {
+          width: min(100%, calc(100dvh - 452px));
+          gap: 1px;
+          padding: 4px;
         }
         .cell,
         .craft-cell {
