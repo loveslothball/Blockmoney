@@ -1,2 +1,13 @@
-# Blockmoney
-Learning Blockchain and make money for every youth people.
+# 拼豆猫
+
+拼豆猫是一个像素风的网页益智小游戏，玩家需要在限定时间内完成拼豆挑战，逐步推进关卡。
+
+## 项目内容
+
+- 像素风游戏界面
+- 关卡与倒计时玩法
+- 适合浏览器直接打开体验
+
+## 运行方式
+
+直接用浏览器打开 `index.html` 即可开始游戏。
