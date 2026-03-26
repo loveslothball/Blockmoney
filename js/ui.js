@@ -38,7 +38,61 @@
     refs.toast.textContent = msg;
     refs.toast.classList.add("show");
     clearTimeout(toast.t);
-    toast.t = setTimeout(() => refs.toast.classList.remove("show"), 1300);
+    toast.t = setTimeout(() => refs.toast.classList.remove("show"), 1800);
+  }
+
+  function showCombo(chain, count) {
+    if (!refs.comboFx) return;
+    clearTimeout(app.comboTimer);
+    const labels = {
+      2: "顺手两连",
+      3: "漂亮三连",
+      4: "节奏爆发"
+    };
+    const title = chain >= 5 ? `${chain}x 连锁` : labels[chain] || `${chain}x 连击`;
+    refs.comboFx.innerHTML = `<strong>${title}</strong><span>${count} 颗拼豆同时起飞</span>`;
+    refs.comboFx.classList.remove("show");
+    void refs.comboFx.offsetWidth;
+    refs.comboFx.classList.add("show");
+    app.comboTimer = setTimeout(() => refs.comboFx.classList.remove("show"), 900);
+  }
+
+  function showCelebration({ bonus, nextLevel, hardLevel }) {
+    clearTimeout(app.celebrationTimer);
+    refs.celebrationKicker.textContent = hardLevel ? "超难完成" : "关卡完成";
+    refs.celebrationTitle.textContent = hardLevel ? "硬核拿下" : "完美出炉";
+    refs.celebrationText.textContent = hardLevel
+      ? "你把高压关也拼得整整齐齐。"
+      : "这一关的拼豆图收得很利落。";
+    refs.celebrationScore.textContent = `+${bonus}`;
+    refs.celebrationLevel.textContent = `Lv.${nextLevel}`;
+    refs.celebrationLayer.classList.remove("hidden");
+    refs.celebrationLayer.classList.remove("show");
+    void refs.celebrationLayer.offsetWidth;
+    refs.celebrationLayer.classList.add("show");
+    app.celebrationTimer = setTimeout(() => {
+      refs.celebrationLayer.classList.add("hidden");
+      refs.celebrationLayer.classList.remove("show");
+    }, 1080);
+  }
+
+  function showResult({ title, detail, score, levels, badge }) {
+    const card = refs.resultLayer.querySelector(".result-card");
+    card.classList.remove("fail");
+    card.style.animation = "none";
+    void card.offsetWidth;
+    card.style.animation = "";
+    if (badge) refs.resultBadge.textContent = badge;
+    refs.resultTitle.textContent = title;
+    refs.resultText.textContent = detail;
+    refs.resultScore.textContent = `${score}`;
+    refs.resultLevels.textContent = `${levels}`;
+    refs.resultLayer.classList.remove("hidden");
+  }
+
+  function showFailureResult(payload) {
+    showResult(payload);
+    refs.resultLayer.querySelector(".result-card").classList.add("fail");
   }
 
   function getLeaderboard() {
@@ -197,6 +251,10 @@
     hideHelp,
     updateCraftTimer,
     toast,
+    showCombo,
+    showCelebration,
+    showResult,
+    showFailureResult,
     getLeaderboard,
     saveLeaderboard,
     renderLeaderboard,

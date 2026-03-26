@@ -12,6 +12,9 @@
     hideHelp,
     updateCraftTimer,
     toast,
+    showCombo,
+    showCelebration,
+    showFailureResult,
     getLeaderboard,
     saveLeaderboard,
     renderLeaderboard,
@@ -23,7 +26,7 @@
     drawCraft,
     drawResources
   } = G.ui;
-  const { ensureAudio, sfxMatch, sfxPlace, sfxFail, sfxSuccess, sfxHardAlert, startBgm, stopBgm, refreshBgm, updateSoundButton } =
+  const { ensureAudio, sfxMatch, sfxCombo, sfxPlace, sfxFail, sfxSuccess, sfxHardAlert, startBgm, stopBgm, refreshBgm, updateSoundButton } =
     G.audioApi;
   const audio = G.audio;
 
@@ -114,12 +117,32 @@
     updateActionButtons();
   }
 
-  async function animateCollect(matchCells) {
+  function markMatches(matchCells, chain) {
+    matchCells.forEach(({ r, c }) => {
+      const cell = refs.board.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+      if (!cell) return;
+      cell.classList.add("matching");
+      if (chain > 1) cell.classList.add(`cascade-${Math.min(chain, 4)}`);
+      const bean = cell.querySelector(".bean");
+      if (bean) {
+        const rect = bean.getBoundingClientRect();
+        const ring = document.createElement("div");
+        ring.className = "burst-ring";
+        ring.style.left = `${rect.left + rect.width / 2 - 11}px`;
+        ring.style.top = `${rect.top + rect.height / 2 - 11}px`;
+        ring.style.borderColor = COLORS[app.board[r][c]].hex;
+        document.body.appendChild(ring);
+        setTimeout(() => ring.remove(), 540);
+      }
+    });
+  }
+
+  async function animateCollect(matchCells, chain) {
     const tasks = [];
     matchCells.forEach(({ r, c }) => {
       const color = app.board[r][c];
       app.collected[color] += 1;
-      addScore(10);
+      addScore(10 + (chain - 1) * 4);
       const source = refs.board.querySelector(`[data-r="${r}"][data-c="${c}"] .bean`);
       const target = refs.progressBoard.querySelector(`.progress-item[data-color="${color}"] .dot`);
       if (!source || !target) return;
@@ -134,18 +157,18 @@
       fly.style.left = s.left + s.width / 2 - 10 + "px";
       fly.style.top = s.top + s.height / 2 - 10 + "px";
       fly.style.zIndex = 50;
-      fly.style.transition = "transform 0.45s cubic-bezier(.2,.8,.2,1), opacity 0.45s";
+      fly.style.transition = "transform 0.58s cubic-bezier(.2,.8,.2,1), opacity 0.58s";
       document.body.appendChild(fly);
       requestAnimationFrame(() => {
         fly.style.transform = `translate(${t.left - s.left}px, ${t.top - s.top}px) scale(0.35)`;
-        fly.style.opacity = "0.2";
+        fly.style.opacity = "0.16";
       });
       tasks.push(
         new Promise((resolve) => {
           setTimeout(() => {
             fly.remove();
             resolve();
-          }, 470);
+          }, 620);
         })
       );
     });
@@ -154,18 +177,28 @@
 
   async function resolveBoard(initialMatches) {
     let matches = initialMatches;
+    let chain = 1;
     while (matches.length) {
-      sfxMatch(matches.length);
       renderBoard(onCellTap);
-      await animateCollect(matches);
+      markMatches(matches, chain);
+      await new Promise((resolve) => setTimeout(resolve, 180));
+      sfxMatch(matches.length);
+      if (chain > 1) {
+        sfxCombo(chain);
+        showCombo(chain, matches.length);
+      }
+      await animateCollect(matches, chain);
       matches.forEach(({ r, c }) => {
         app.board[r][c] = null;
       });
       collapse(app.board);
       drawProgress();
       renderBoard(onCellTap);
+      await new Promise((resolve) => setTimeout(resolve, 220));
       matches = findMatches(app.board);
+      chain += 1;
     }
+    app.comboChain = 0;
     app.locked = false;
 
     if (isCollectDone(app)) {
@@ -265,12 +298,17 @@
     app.clearedLevels += 1;
     sfxSuccess();
     toast(`第${app.clearedLevels}关通关 +${bonus}分`);
+    showCelebration({
+      bonus,
+      nextLevel: app.level + 1,
+      hardLevel: app.hardLevel
+    });
     app.level += 1;
     app.phase = "transition";
     clearTimeout(app.levelTransitionTimer);
     app.levelTransitionTimer = setTimeout(() => {
       if (app.phase === "transition") startLevel(false);
-    }, 900);
+    }, 1180);
   }
 
   function endRun(detail) {
@@ -280,6 +318,8 @@
     clearInterval(app.craftTimer);
     clearTimeout(app.levelTransitionTimer);
     clearTimeout(app.introOverlayTimer);
+    clearTimeout(app.celebrationTimer);
+    clearTimeout(app.comboTimer);
     sfxFail();
     const record = {
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -290,12 +330,16 @@
     list.push(record);
     list.sort((a, b) => b.score - a.score || b.levels - a.levels);
     saveLeaderboard(list);
-    refs.resultTitle.textContent = "本局结束";
-    refs.resultText.textContent = `${detail}。本次通关 ${app.clearedLevels} 关，总分 ${app.score} 分。`;
+    showFailureResult({
+      badge: app.clearedLevels > 0 ? "挑战中断" : "首次尝试",
+      title: app.clearedLevels > 0 ? "差一点就更远了" : "先热热身",
+      detail: `${detail}。本次通关 ${app.clearedLevels} 关，总分 ${app.score} 分。`,
+      score: app.score,
+      levels: app.clearedLevels
+    });
     renderLeaderboard(record.id);
     updateBestStats();
     refs.pauseLayer.classList.add("hidden");
-    refs.resultLayer.classList.remove("hidden");
     updateActionButtons();
   }
 
@@ -304,6 +348,8 @@
     app.paused = false;
     clearTimeout(app.levelTransitionTimer);
     clearTimeout(app.introOverlayTimer);
+    clearTimeout(app.celebrationTimer);
+    clearTimeout(app.comboTimer);
     app.hardLevel = isHardLevel(app.level);
     applyDifficultyUI();
     app.steps = levelStepLimit(app.level);
@@ -322,6 +368,8 @@
     refs.timerText.textContent = `步数 ${app.steps}`;
     refs.stepText.textContent = app.steps;
     refs.resultLayer.classList.add("hidden");
+    refs.celebrationLayer.classList.add("hidden");
+    refs.celebrationLayer.classList.remove("show");
     refs.pauseLayer.classList.add("hidden");
     refs.helpLayer.classList.add("hidden");
     refs.collectPhase.classList.remove("phase-hidden");
@@ -350,6 +398,8 @@
   function resetGame() {
     clearInterval(app.craftTimer);
     app.paused = false;
+    app.comboChain = 0;
+    clearTimeout(app.comboTimer);
     app.level = 1;
     app.clearedLevels = 0;
     app.score = 0;
@@ -365,10 +415,13 @@
     clearInterval(app.craftTimer);
     clearTimeout(app.levelTransitionTimer);
     clearTimeout(app.introOverlayTimer);
+    clearTimeout(app.celebrationTimer);
+    clearTimeout(app.comboTimer);
     applyDifficultyUI();
     refs.startLayer.classList.remove("hidden");
     refs.introOverlay.classList.add("hidden");
     refs.resultLayer.classList.add("hidden");
+    refs.celebrationLayer.classList.add("hidden");
     refs.pauseLayer.classList.add("hidden");
     refs.helpLayer.classList.add("hidden");
     renderLeaderboard();

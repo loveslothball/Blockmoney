@@ -7,7 +7,7 @@
     <style>
       :root {
         --phone-w: min(430px, 100vw);
-        --phone-h: min(932px, 100vh);
+        --phone-h: min(932px, 100dvh);
         --bg-1: #f5e6c8;
         --bg-2: #e7d1a4;
         --ink: #1e1b26;
@@ -23,6 +23,9 @@
         --yellow: #ffd86f;
         --purple: #b89cff;
         --pixel-shadow: 4px 4px 0 #312d3c;
+        --celebrate: #63d9b4;
+        --celebrate-ink: #0f513d;
+        --danger-glow: rgba(216, 75, 82, 0.28);
       }
 
       * {
@@ -34,6 +37,7 @@
         min-height: 100dvh;
         display: grid;
         place-items: center;
+        padding: 18px;
         background:
           linear-gradient(45deg, rgba(255, 255, 255, 0.22) 25%, transparent 25%),
           linear-gradient(-45deg, rgba(255, 255, 255, 0.22) 25%, transparent 25%),
@@ -59,7 +63,7 @@
       .phone {
         width: var(--phone-w);
         height: var(--phone-h);
-        max-height: 100vh;
+        max-height: calc(100dvh - 36px);
         border-radius: 16px;
         border: 3px solid var(--line);
         box-shadow: 8px 8px 0 #312d3c;
@@ -303,11 +307,26 @@
         background: #fff9eb;
         display: grid;
         place-items: center;
+        transition: transform 160ms ease-out, filter 180ms ease-out, opacity 180ms ease-out;
       }
 
       .cell.selected {
         outline: 3px solid #ff8f42;
         transform: scale(1.03);
+      }
+
+      .cell.matching {
+        animation: matchPulse 360ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+        z-index: 2;
+      }
+
+      .cell.cascade-2 {
+        box-shadow: 0 0 0 3px rgba(255, 216, 111, 0.45);
+      }
+
+      .cell.cascade-3,
+      .cell.cascade-4 {
+        box-shadow: 0 0 0 3px rgba(184, 156, 255, 0.45), 0 0 18px rgba(114, 197, 255, 0.35);
       }
 
       .bean {
@@ -317,6 +336,23 @@
         border-radius: 50%;
         border: 2px solid rgba(30, 27, 38, 0.35);
         box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.15), inset 2px 2px 0 rgba(255, 255, 255, 0.25);
+        transition: transform 240ms ease-out, opacity 200ms ease-out, filter 200ms ease-out;
+      }
+
+      .cell.matching .bean {
+        transform: scale(1.18);
+        filter: brightness(1.18) saturate(1.2);
+      }
+
+      .burst-ring {
+        position: fixed;
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        border: 3px solid rgba(255, 255, 255, 0.82);
+        pointer-events: none;
+        z-index: 52;
+        animation: burstRing 520ms ease-out forwards;
       }
 
       .collect-footer {
@@ -418,6 +454,41 @@
         opacity: 1;
       }
 
+      .combo-fx {
+        position: absolute;
+        top: calc(env(safe-area-inset-top, 0px) + 76px);
+        left: 50%;
+        transform: translate(-50%, -18px) scale(0.92);
+        min-width: min(76%, 280px);
+        padding: 12px 16px;
+        border-radius: 10px;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        background: linear-gradient(135deg, rgba(23, 29, 41, 0.92), rgba(56, 31, 71, 0.9));
+        color: #fff7d8;
+        text-align: center;
+        box-shadow: 0 16px 32px rgba(18, 16, 35, 0.28);
+        opacity: 0;
+        pointer-events: none;
+        z-index: 18;
+      }
+
+      .combo-fx.show {
+        animation: comboBanner 880ms cubic-bezier(0.2, 0.85, 0.25, 1) forwards;
+      }
+
+      .combo-fx strong {
+        display: block;
+        font-size: 22px;
+        color: #fff;
+      }
+
+      .combo-fx span {
+        display: block;
+        margin-top: 6px;
+        font-size: 11px;
+        color: rgba(255, 247, 216, 0.9);
+      }
+
       .overlay {
         position: absolute;
         inset: 0;
@@ -442,6 +513,7 @@
         border: 2px solid rgba(255, 255, 255, 0.24);
         border-radius: 8px;
         padding: 18px;
+        backdrop-filter: blur(10px);
       }
 
       .overlay h2 {
@@ -508,6 +580,61 @@
         background: #fff7e2;
         padding: 18px;
         text-align: center;
+        box-shadow: 0 20px 40px rgba(12, 18, 26, 0.34);
+        transform: translateY(18px) scale(0.96);
+        opacity: 0;
+        animation: resultIn 420ms cubic-bezier(0.2, 0.9, 0.22, 1) forwards;
+      }
+
+      .result-card.fail {
+        background: linear-gradient(180deg, #fff0ef, #ffdcd8);
+        border-color: #8a2d32;
+        box-shadow: 0 18px 42px rgba(109, 20, 28, 0.28), 0 0 0 4px var(--danger-glow);
+      }
+
+      .result-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 36px;
+        margin-bottom: 12px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 2px solid rgba(49, 45, 60, 0.18);
+        background: rgba(255, 255, 255, 0.84);
+        color: #7c2d2d;
+        font-size: 11px;
+      }
+
+      .result-card.fail .result-badge {
+        background: rgba(138, 45, 50, 0.12);
+        border-color: rgba(138, 45, 50, 0.28);
+      }
+
+      .result-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin: 0 0 14px;
+      }
+
+      .result-stat {
+        border: 2px solid rgba(49, 45, 60, 0.16);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 10px 8px;
+      }
+
+      .result-stat strong {
+        display: block;
+        font-size: 18px;
+      }
+
+      .result-stat span {
+        display: block;
+        margin-top: 4px;
+        color: var(--ink-soft);
+        font-size: 11px;
       }
 
       .result-card h3 {
@@ -604,6 +731,89 @@
         animation: iron 900ms ease-out;
       }
 
+      .celebration-layer {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        z-index: 15;
+        pointer-events: none;
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.28), transparent 34%),
+          linear-gradient(180deg, rgba(11, 20, 32, 0.24), rgba(11, 20, 32, 0.7));
+        opacity: 0;
+      }
+
+      .celebration-layer.hidden {
+        display: none;
+      }
+
+      .celebration-layer.show {
+        animation: overlayFade 1050ms ease-out forwards;
+      }
+
+      .celebration-card {
+        width: min(84%, 340px);
+        border-radius: 12px;
+        padding: 18px;
+        background: linear-gradient(145deg, rgba(255, 251, 235, 0.94), rgba(222, 255, 241, 0.92));
+        border: 2px solid rgba(99, 217, 180, 0.6);
+        box-shadow: 0 20px 46px rgba(15, 81, 61, 0.26);
+        color: var(--celebrate-ink);
+        text-align: center;
+        transform: translateY(18px) scale(0.94);
+      }
+
+      .celebration-layer.show .celebration-card {
+        animation: cardLift 1050ms cubic-bezier(0.2, 0.88, 0.2, 1) forwards;
+      }
+
+      .celebration-kicker {
+        display: inline-flex;
+        min-height: 34px;
+        align-items: center;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 2px solid rgba(15, 81, 61, 0.16);
+        background: rgba(255, 255, 255, 0.74);
+        font-size: 11px;
+      }
+
+      .celebration-card h3 {
+        margin: 14px 0 8px;
+        font-size: 28px;
+      }
+
+      .celebration-card p {
+        margin: 0;
+        color: rgba(15, 81, 61, 0.8);
+      }
+
+      .celebration-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .celebration-stats div {
+        border-radius: 8px;
+        border: 2px solid rgba(15, 81, 61, 0.12);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 10px 8px;
+      }
+
+      .celebration-stats strong {
+        display: block;
+        font-size: 18px;
+      }
+
+      .celebration-stats span {
+        display: block;
+        margin-top: 4px;
+        font-size: 11px;
+      }
+
       .phase-hidden {
         display: none !important;
       }
@@ -666,12 +876,153 @@
         }
       }
 
+      @keyframes matchPulse {
+        0% {
+          transform: scale(1);
+          filter: brightness(1);
+        }
+        35% {
+          transform: scale(1.08);
+          filter: brightness(1.18);
+        }
+        100% {
+          transform: scale(0.84);
+          filter: brightness(1.34);
+        }
+      }
+
+      @keyframes burstRing {
+        0% {
+          opacity: 0.8;
+          transform: scale(0.35);
+        }
+        100% {
+          opacity: 0;
+          transform: scale(2.8);
+        }
+      }
+
+      @keyframes comboBanner {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -18px) scale(0.9);
+        }
+        18% {
+          opacity: 1;
+          transform: translate(-50%, 0) scale(1.02);
+        }
+        70% {
+          opacity: 1;
+          transform: translate(-50%, 4px) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, 10px) scale(0.96);
+        }
+      }
+
+      @keyframes resultIn {
+        0% {
+          opacity: 0;
+          transform: translateY(18px) scale(0.95);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes overlayFade {
+        0% {
+          opacity: 0;
+        }
+        20% {
+          opacity: 1;
+        }
+        84% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes cardLift {
+        0% {
+          opacity: 0;
+          transform: translateY(20px) scale(0.94);
+        }
+        18% {
+          opacity: 1;
+          transform: translateY(0) scale(1.02);
+        }
+        84% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-8px) scale(0.98);
+        }
+      }
+
       @media (max-width: 420px) {
+        body {
+          padding: 0;
+        }
+        .phone {
+          width: 100%;
+          min-height: 100dvh;
+          height: auto;
+          max-height: none;
+          border-radius: 0;
+          border-left: 0;
+          border-right: 0;
+          box-shadow: none;
+        }
+        .screen {
+          min-height: 100dvh;
+          padding: calc(env(safe-area-inset-top, 0px) + 12px) 10px calc(env(safe-area-inset-bottom, 0px) + 28px);
+          gap: 10px;
+        }
+        .topbar {
+          padding: 10px;
+        }
+        .topbar-right {
+          width: 100%;
+          justify-content: flex-start;
+        }
+        .target-row {
+          grid-template-columns: 78px 1fr;
+        }
+        .mini-grid {
+          width: 58px;
+          height: 58px;
+        }
+        .board-wrap {
+          padding: 8px;
+        }
+        .board,
+        .craft-grid {
+          width: min(100%, 100vw - 44px);
+          gap: 3px;
+        }
         .progress-item strong {
           font-size: 14px;
         }
         .resource-panel {
           gap: 6px;
+        }
+        .collect-footer {
+          padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+        }
+        .result-card,
+        .overlay-card,
+        .celebration-card {
+          width: min(92%, 360px);
+        }
+        .combo-fx {
+          top: calc(env(safe-area-inset-top, 0px) + 68px);
         }
       }
 
@@ -791,12 +1142,41 @@
       </div>
 
       <div class="iron-sweep" id="ironSweep"></div>
+      <div class="combo-fx" id="comboFx" aria-live="polite"></div>
+      <div class="celebration-layer hidden" id="celebrationLayer">
+        <div class="celebration-card">
+          <span class="celebration-kicker" id="celebrationKicker">关卡完成</span>
+          <h3 id="celebrationTitle">漂亮收尾</h3>
+          <p id="celebrationText">你的拼豆图已经熨平出炉。</p>
+          <div class="celebration-stats">
+            <div>
+              <strong id="celebrationScore">+0</strong>
+              <span>本关奖励</span>
+            </div>
+            <div>
+              <strong id="celebrationLevel">Lv.1</strong>
+              <span>下一关</span>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
       <div class="result hidden" id="resultLayer">
         <div class="result-card">
+          <div class="result-badge" id="resultBadge">挑战结束</div>
           <h3 id="resultTitle"></h3>
           <p id="resultText"></p>
+          <div class="result-stats">
+            <div class="result-stat">
+              <strong id="resultScore">0</strong>
+              <span>总分</span>
+            </div>
+            <div class="result-stat">
+              <strong id="resultLevels">0</strong>
+              <span>通关</span>
+            </div>
+          </div>
           <div class="leaderboard">
             <h4>排行榜</h4>
             <ol id="leaderboardList"></ol>
