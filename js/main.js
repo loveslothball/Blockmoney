@@ -72,7 +72,7 @@
     for (let r = 0; r < COLLECT_SIZE; r += 1) {
       for (let c = 0; c < COLLECT_SIZE; c += 1) {
         const color = app.board[r][c];
-        if (!color || !remainingNeed(color)) continue;
+        if (!color || !remainingNeed(color) || app.specials?.[r]?.[c]) continue;
         positionsByColor[color].push({ r, c });
         if (app.collectTargets?.[r]?.[c]) {
           nextTargets[r][c] = true;
@@ -617,7 +617,10 @@
         sfxCombo(chain);
         showCombo(chain, expandedMatches.length);
       }
-      if (!anyTargetTouched && chain === 1) toast("只有带星目标豆才会计入收集");
+      if (!anyTargetTouched && chain === 1 && !app.targetRuleWarned) {
+        app.targetRuleWarned = true;
+        toast("只有带星目标豆才会计入收集");
+      }
       else if (unlockedCount > 0 && crackedCount > 0) toast(`解锁 ${unlockedCount} 颗，冰裂 ${crackedCount} 颗`);
       else if (unlockedCount > 0) toast(`锁定目标豆已解锁 ${unlockedCount} 颗`);
       else if (crackedCount > 0) toast(`冰冻目标豆已敲裂 ${crackedCount} 颗`);
@@ -634,6 +637,8 @@
       app.boardFx = collapse(app.board, app.specials, app.collectTargets, app.collectTargetStates);
       if (reward && app.board[reward.r]?.[reward.c]) {
         app.specials[reward.r][reward.c] = reward.type;
+        app.collectTargets[reward.r][reward.c] = false;
+        app.collectTargetStates[reward.r][reward.c] = null;
       }
       refreshCollectTargets();
       drawProgress();
@@ -853,6 +858,7 @@
     app.shuffleCharges = 1;
     app.staleTurns = 0;
     app.hintMove = null;
+    app.targetRuleWarned = false;
     app.placed = Array.from({ length: app.craftSize }, () => Array(app.craftSize).fill(null));
     app.activeColor = null;
     app.locked = false;
@@ -997,14 +1003,13 @@
     if (pos) return;
     resetDrag();
   });
-  document.addEventListener(
-    "pointerdown",
-    () => {
-      ensureAudio();
-      if (audio.ctx && audio.ctx.state === "suspended") audio.ctx.resume();
-    },
-    { once: true }
-  );
+  const primeAudio = () => {
+    ensureAudio();
+    if (audio.ctx && audio.ctx.state === "suspended") audio.ctx.resume();
+  };
+  document.addEventListener("pointerdown", primeAudio, { once: true });
+  document.addEventListener("touchstart", primeAudio, { once: true });
+  document.addEventListener("click", primeAudio, { once: true });
 
   updateSoundButton();
   showStartMenu();

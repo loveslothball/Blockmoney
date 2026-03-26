@@ -230,14 +230,17 @@
     hint.className = "need need-hint";
     hint.textContent = "星标有效；锁链先解锁；冰冻需敲两次";
     refs.needList.appendChild(hint);
+    const countRow = document.createElement("div");
+    countRow.className = "need-count-row";
     COLOR_KEYS.forEach((k) => {
       const need = app.needed[k];
       if (!need) return;
       const tag = document.createElement("span");
       tag.className = "need";
       tag.textContent = `${COLORS[k].name} x ${need}`;
-      refs.needList.appendChild(tag);
+      countRow.appendChild(tag);
     });
+    refs.needList.appendChild(countRow);
   }
 
   function renderBoard(onCellTap) {

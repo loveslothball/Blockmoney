@@ -12,7 +12,7 @@
   };
 
   function playTone(freq, duration = 0.12, type = "square", volume = 0.05, when = 0, attack = 0.01) {
-    if (!audio.enabled || !audio.ctx) return;
+    if (!audio.enabled || !audio.ctx || audio.ctx.state === "suspended") return;
     const t0 = audio.ctx.currentTime + when;
     const osc = audio.ctx.createOscillator();
     const gain = audio.ctx.createGain();
@@ -190,7 +190,7 @@
     playBgmStep(audio.bgmStep++);
     audio.bgmTimer = setInterval(() => {
       if (!audio.enabled) return;
-      if (audio.ctx.state === "suspended") audio.ctx.resume();
+      if (audio.ctx.state === "suspended") return;
       playBgmStep(audio.bgmStep++);
     }, theme.tempo);
   }
@@ -204,10 +204,15 @@
   }
 
   function ensureAudio() {
-    if (audio.ctx) return;
+    if (audio.ctx) {
+      if (audio.ctx.state === "suspended") audio.ctx.resume();
+      if (!audio.bgmTimer && audio.enabled) startBgm();
+      return;
+    }
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
     audio.ctx = new Ctx();
+    if (audio.ctx.state === "suspended") audio.ctx.resume();
     startBgm();
   }
 

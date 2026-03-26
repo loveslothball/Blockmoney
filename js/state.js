@@ -149,7 +149,8 @@
     drag: null,
     shuffleCharges: 1,
     staleTurns: 0,
-    hintMove: null
+    hintMove: null,
+    targetRuleWarned: false
   };
 
   const refs = {

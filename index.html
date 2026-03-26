@@ -300,6 +300,8 @@
       }
 
       .need-hint {
+        width: 100%;
+        text-align: center;
         background: rgba(255, 248, 214, 0.9);
         color: #8a6110;
       }
@@ -429,19 +431,21 @@
 
       .target-marker {
         position: absolute;
-        right: -2px;
-        top: -5px;
-        width: 16px;
-        height: 16px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 22px;
+        height: 22px;
         display: grid;
         place-items: center;
         border-radius: 50%;
-        background: linear-gradient(180deg, #fff9cf, #ffd46b);
-        color: #7c5200;
-        font-size: 10px;
+        background: radial-gradient(circle, rgba(255, 249, 207, 0.95), rgba(255, 212, 107, 0.72));
+        color: rgba(124, 82, 0, 0.9);
+        font-size: 12px;
         font-weight: 900;
         border: 1px solid rgba(124, 82, 0, 0.2);
-        box-shadow: 0 3px 8px rgba(124, 82, 0, 0.2);
+        box-shadow: 0 3px 10px rgba(124, 82, 0, 0.14);
+        pointer-events: none;
       }
 
       .target-state-badge {
@@ -750,6 +754,14 @@
         justify-content: center;
         gap: 8px;
         flex-wrap: wrap;
+      }
+
+      .need-count-row {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
       }
       .menu-actions {
         margin-top: 14px;
@@ -1604,7 +1616,7 @@
         </div>
       </div>
 
-      <div class="overlay hidden" id="helpLayer">
+      <div class="overlay menu-overlay hidden" id="helpLayer">
         <div class="overlay-card">
           <h2>玩法说明</h2>
           <p>先收集颜色豆，再按目标图把小动物拼出来。</p>
