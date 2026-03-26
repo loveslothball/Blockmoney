@@ -6,6 +6,7 @@
     <title>拼豆猫</title>
     <style>
       :root {
+        --grid-size: 10;
         --phone-w: min(430px, 100vw);
         --phone-h: min(932px, 100dvh);
         --bg-1: #f5e6c8;
@@ -226,7 +227,7 @@
         width: 70px;
         height: 70px;
         display: grid;
-        grid-template-columns: repeat(8, 1fr);
+        grid-template-columns: repeat(var(--grid-size), 1fr);
         gap: 2px;
         background: #8f8a9e;
         border-radius: 2px;
@@ -287,7 +288,7 @@
         width: min(100%, 390px);
         aspect-ratio: 1;
         display: grid;
-        grid-template-columns: repeat(8, 1fr);
+        grid-template-columns: repeat(var(--grid-size), 1fr);
         gap: 4px;
       }
 
@@ -1003,6 +1004,7 @@
           min-height: 100dvh;
           padding: calc(env(safe-area-inset-top, 0px) + 12px) 10px calc(env(safe-area-inset-bottom, 0px) + 28px);
           gap: 10px;
+          overflow-y: auto;
         }
         .topbar {
           padding: 10px;
@@ -1018,16 +1020,43 @@
           width: 58px;
           height: 58px;
         }
-        .board-wrap {
+        .progress-board {
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 6px;
           padding: 8px;
+        }
+        .progress-item {
+          padding: 6px 4px;
+        }
+        .board-wrap {
+          flex: 0 1 auto;
+          padding: 6px;
         }
         .board,
         .craft-grid {
-          width: min(100%, 100vw - 44px);
-          gap: 3px;
+          width: min(100%, calc(100dvh - 420px));
+          min-width: 0;
+          gap: 2px;
+        }
+        .cell,
+        .craft-cell {
+          border-width: 1px;
+        }
+        .bean {
+          width: 86%;
+          border-width: 1px;
         }
         .progress-item strong {
-          font-size: 14px;
+          font-size: 13px;
+        }
+        .progress-item small,
+        .run-stats,
+        .badge,
+        .sound-btn,
+        .share-btn,
+        .control-btn,
+        .menu-btn {
+          font-size: 11px;
         }
         .resource-panel {
           gap: 6px;
