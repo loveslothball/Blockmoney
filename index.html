@@ -299,6 +299,11 @@
         font-size: 12px;
       }
 
+      .need-hint {
+        background: rgba(255, 248, 214, 0.9);
+        color: #8a6110;
+      }
+
       .board-wrap {
         flex: 1;
         min-height: 0;
@@ -344,6 +349,11 @@
         transform: scale(1.03);
       }
 
+      .cell.hinted {
+        animation: hintPulse 1.1s ease-in-out infinite;
+        box-shadow: 0 0 0 3px rgba(87, 184, 255, 0.24);
+      }
+
       .cell.matching {
         animation: matchPulse 360ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
         z-index: 2;
@@ -362,6 +372,7 @@
         width: 82%;
         height: auto;
         aspect-ratio: 1;
+        position: relative;
         border-radius: 50%;
         border: 2px solid rgba(30, 27, 38, 0.35);
         box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.15), inset 2px 2px 0 rgba(255, 255, 255, 0.25);
@@ -407,6 +418,88 @@
       .cell.matching .bean {
         transform: scale(1.18);
         filter: brightness(1.18) saturate(1.2);
+      }
+
+      .bean.target-bean {
+        box-shadow:
+          0 0 0 3px rgba(255, 253, 233, 0.98) inset,
+          0 0 0 1px rgba(211, 166, 53, 0.82),
+          0 4px 10px rgba(208, 156, 51, 0.24);
+      }
+
+      .target-marker {
+        position: absolute;
+        right: -2px;
+        top: -5px;
+        width: 16px;
+        height: 16px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: linear-gradient(180deg, #fff9cf, #ffd46b);
+        color: #7c5200;
+        font-size: 10px;
+        font-weight: 900;
+        border: 1px solid rgba(124, 82, 0, 0.2);
+        box-shadow: 0 3px 8px rgba(124, 82, 0, 0.2);
+      }
+
+      .target-state-badge {
+        position: absolute;
+        left: -4px;
+        bottom: -5px;
+        min-width: 16px;
+        height: 16px;
+        padding: 0 3px;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        font-size: 9px;
+        font-weight: 900;
+        color: #f7fbff;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 3px 8px rgba(38, 52, 90, 0.2);
+      }
+
+      .bean[data-target-state="lock"]::before,
+      .bean[data-target-state="ice"]::before,
+      .bean[data-target-state="cracked"]::before {
+        content: "";
+        position: absolute;
+        inset: 8%;
+        border-radius: 50%;
+        pointer-events: none;
+      }
+
+      .bean[data-target-state="lock"]::before {
+        border: 2px dashed rgba(66, 72, 88, 0.72);
+      }
+
+      .bean[data-target-state="ice"]::before {
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(155, 214, 255, 0.16)),
+          rgba(175, 228, 255, 0.24);
+        box-shadow: 0 0 0 2px rgba(155, 214, 255, 0.46) inset;
+      }
+
+      .bean[data-target-state="cracked"]::before {
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(155, 214, 255, 0.06)),
+          rgba(175, 228, 255, 0.16);
+        box-shadow: 0 0 0 2px rgba(155, 214, 255, 0.3) inset;
+        clip-path: polygon(0 0, 40% 0, 52% 34%, 70% 0, 100% 0, 60% 55%, 100% 100%, 58% 100%, 44% 68%, 25% 100%, 0 100%, 34% 48%);
+      }
+
+      .target-state-lock {
+        background: linear-gradient(180deg, #60687e, #434c63);
+      }
+
+      .target-state-ice {
+        background: linear-gradient(180deg, #8cd3ff, #4d8edf);
+      }
+
+      .target-state-cracked {
+        background: linear-gradient(180deg, #9fd9ff, #6ea3dc);
       }
 
       .burst-ring {
@@ -1145,6 +1238,18 @@
         }
       }
 
+      @keyframes hintPulse {
+        0%,
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 3px rgba(87, 184, 255, 0.2);
+        }
+        50% {
+          transform: scale(1.04);
+          box-shadow: 0 0 0 4px rgba(87, 184, 255, 0.34), 0 0 18px rgba(87, 184, 255, 0.18);
+        }
+      }
+
       @keyframes focusGapPulse {
         0%,
         100% {
@@ -1415,6 +1520,7 @@
               <button id="helpBtn" class="control-btn" type="button" aria-label="查看玩法说明">说明</button>
               <button id="pauseBtn" class="control-btn hidden" type="button" aria-label="暂停或继续游戏">暂停</button>
               <button id="restartGameBtn" class="control-btn hidden" type="button" aria-label="重新开始游戏">重开</button>
+              <button id="shuffleBtn" class="control-btn hidden" type="button" aria-label="洗牌一次">洗牌 1</button>
             </div>
             <button id="soundBtn" class="sound-btn" type="button" aria-label="切换音效">音效开</button>
             <button id="shareBtn" class="share-btn" type="button" aria-label="分享游戏">分享</button>

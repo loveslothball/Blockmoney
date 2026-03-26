@@ -126,6 +126,8 @@
     board: [],
     boardFx: Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(0)),
     specials: Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(null)),
+    collectTargets: Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(false)),
+    collectTargetStates: Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(null)),
     selected: null,
     needed: {},
     collected: {},
@@ -144,7 +146,10 @@
     celebrationTimer: null,
     locked: false,
     paused: false,
-    drag: null
+    drag: null,
+    shuffleCharges: 1,
+    staleTurns: 0,
+    hintMove: null
   };
 
   const refs = {
@@ -202,6 +207,7 @@
     helpBtn: document.getElementById("helpBtn"),
     pauseBtn: document.getElementById("pauseBtn"),
     restartGameBtn: document.getElementById("restartGameBtn"),
+    shuffleBtn: document.getElementById("shuffleBtn"),
     helpMenuBtn: document.getElementById("helpMenuBtn"),
     helpLayer: document.getElementById("helpLayer"),
     closeHelpBtn: document.getElementById("closeHelpBtn"),

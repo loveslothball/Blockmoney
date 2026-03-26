@@ -44,10 +44,206 @@
     return Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(fill));
   }
 
+  function shuffleList(list) {
+    const arr = [...list];
+    for (let i = arr.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function remainingNeed(color) {
+    return Math.max((app.needed[color] || 0) - (app.collected[color] || 0), 0);
+  }
+
+  function pickTargetState() {
+    const roll = Math.random();
+    if (app.level >= 5 && roll < Math.min(0.14, 0.06 + app.level * 0.01)) return "ice";
+    if (app.level >= 2 && roll < Math.min(0.34, 0.16 + app.level * 0.015)) return "lock";
+    return null;
+  }
+
+  function refreshCollectTargets() {
+    const nextTargets = createCollectGrid(false);
+    const nextStates = createCollectGrid(null);
+    const positionsByColor = Object.fromEntries(COLOR_KEYS.map((key) => [key, []]));
+    const currentCount = Object.fromEntries(COLOR_KEYS.map((key) => [key, 0]));
+    for (let r = 0; r < COLLECT_SIZE; r += 1) {
+      for (let c = 0; c < COLLECT_SIZE; c += 1) {
+        const color = app.board[r][c];
+        if (!color || !remainingNeed(color)) continue;
+        positionsByColor[color].push({ r, c });
+        if (app.collectTargets?.[r]?.[c]) {
+          nextTargets[r][c] = true;
+          nextStates[r][c] = app.collectTargetStates?.[r]?.[c] || null;
+          currentCount[color] += 1;
+        }
+      }
+    }
+
+    const activeColors = COLOR_KEYS.filter((color) => remainingNeed(color) > 0);
+    activeColors.forEach((color) => {
+      positionsByColor[color] = shuffleList(positionsByColor[color]);
+      const remain = remainingNeed(color);
+      const desiredCount = Math.min(
+        positionsByColor[color].length,
+        Math.max(1, Math.min(remain, 2 + Math.floor(app.level / 3)))
+      );
+      for (let i = currentCount[color]; i < desiredCount; i += 1) {
+        const pos = positionsByColor[color].find(({ r, c }) => !nextTargets[r][c]);
+        if (!pos) break;
+        nextTargets[pos.r][pos.c] = true;
+        nextStates[pos.r][pos.c] = pickTargetState();
+        currentCount[color] += 1;
+      }
+    });
+
+    let totalMarked = nextTargets.flat().filter(Boolean).length;
+    const desiredTotal = Math.min(18, Math.max(8, 10 + Math.floor(app.level / 2)));
+    const colorCycle = shuffleList(
+      activeColors.slice().sort((a, b) => remainingNeed(b) - remainingNeed(a))
+    );
+    let cursor = 0;
+    let safety = 0;
+    while (totalMarked < desiredTotal && colorCycle.length && safety < 280) {
+      const color = colorCycle[cursor % colorCycle.length];
+      cursor += 1;
+      safety += 1;
+      const pos = positionsByColor[color].find(({ r, c }) => !nextTargets[r][c]);
+      if (!pos) continue;
+      nextTargets[pos.r][pos.c] = true;
+      nextStates[pos.r][pos.c] = pickTargetState();
+      totalMarked += 1;
+    }
+
+    app.collectTargets = nextTargets;
+    app.collectTargetStates = nextStates;
+  }
+
+  function buildShuffledBoardState() {
+    const entries = [];
+    for (let r = 0; r < COLLECT_SIZE; r += 1) {
+      for (let c = 0; c < COLLECT_SIZE; c += 1) {
+        entries.push({
+          color: app.board[r][c],
+          special: app.specials[r][c],
+          target: app.collectTargets[r][c],
+          targetState: app.collectTargetStates[r][c]
+        });
+      }
+    }
+
+    for (let attempt = 0; attempt < 80; attempt += 1) {
+      const shuffled = shuffleList(entries);
+      const board = createCollectGrid(null);
+      const specials = createCollectGrid(null);
+      const targets = createCollectGrid(false);
+      const targetStates = createCollectGrid(null);
+      shuffled.forEach((entry, index) => {
+        const r = Math.floor(index / COLLECT_SIZE);
+        const c = index % COLLECT_SIZE;
+        board[r][c] = entry.color;
+        specials[r][c] = entry.special;
+        targets[r][c] = entry.target;
+        targetStates[r][c] = entry.targetState;
+      });
+      if (!findMatches(board).length && hasAnyMove(board)) return { board, specials, targets, targetStates };
+    }
+
+    return {
+      board: createBoard(),
+      specials: createCollectGrid(null),
+      targets: createCollectGrid(false),
+      targetStates: createCollectGrid(null)
+    };
+  }
+
+  function cloneGrid(grid) {
+    return grid.map((row) => [...row]);
+  }
+
   function swapSpecials(a, b) {
     const t = app.specials[a.r][a.c];
     app.specials[a.r][a.c] = app.specials[b.r][b.c];
     app.specials[b.r][b.c] = t;
+  }
+
+  function swapTargets(a, b) {
+    const target = app.collectTargets[a.r][a.c];
+    app.collectTargets[a.r][a.c] = app.collectTargets[b.r][b.c];
+    app.collectTargets[b.r][b.c] = target;
+    const state = app.collectTargetStates[a.r][a.c];
+    app.collectTargetStates[a.r][a.c] = app.collectTargetStates[b.r][b.c];
+    app.collectTargetStates[b.r][b.c] = state;
+  }
+
+  function scoreMoveTargets(matches, targets, targetStates) {
+    let score = 0;
+    matches.forEach(({ r, c }) => {
+      if (!targets[r][c]) return;
+      const state = targetStates[r][c];
+      if (state === "lock") score += 6;
+      else if (state === "ice") score += 5;
+      else if (state === "cracked") score += 8;
+      else score += 10;
+    });
+    return score;
+  }
+
+  function findSuggestedMove() {
+    let best = null;
+    for (let r = 0; r < COLLECT_SIZE; r += 1) {
+      for (let c = 0; c < COLLECT_SIZE; c += 1) {
+        const neighbors = [
+          { r, c: c + 1 },
+          { r: r + 1, c }
+        ];
+        for (const next of neighbors) {
+          if (next.r >= COLLECT_SIZE || next.c >= COLLECT_SIZE) continue;
+          const board = cloneGrid(app.board);
+          const specials = cloneGrid(app.specials);
+          const targets = cloneGrid(app.collectTargets);
+          const targetStates = cloneGrid(app.collectTargetStates);
+          swap(board, { r, c }, next);
+          const sp = specials[r][c];
+          specials[r][c] = specials[next.r][next.c];
+          specials[next.r][next.c] = sp;
+          const tg = targets[r][c];
+          targets[r][c] = targets[next.r][next.c];
+          targets[next.r][next.c] = tg;
+          const ts = targetStates[r][c];
+          targetStates[r][c] = targetStates[next.r][next.c];
+          targetStates[next.r][next.c] = ts;
+          const specialCombo = specials[r][c] && specials[next.r][next.c];
+          const matches = specialCombo ? [{ r, c }, next] : findMatches(board);
+          if (!matches.length) continue;
+          const targetScore = scoreMoveTargets(matches, targets, targetStates);
+          const sizeScore = matches.length;
+          const specialScore = specialCombo ? 30 : 0;
+          const total = specialScore + targetScore * 3 + sizeScore;
+          if (!best || total > best.score) {
+            best = { a: { r, c }, b: { ...next }, score: total };
+          }
+        }
+      }
+    }
+    return best ? { a: best.a, b: best.b } : null;
+  }
+
+  function maybeShowWeakHint() {
+    if (app.phase !== "collect" || app.locked || app.paused) return;
+    if (app.staleTurns < 3) return;
+    app.hintMove = findSuggestedMove();
+    if (app.hintMove) {
+      renderBoard(onCellTap);
+      toast("先试试这组蓝光提示，尽量碰目标豆");
+    }
+  }
+
+  function clearWeakHint() {
+    if (!app.hintMove) return;
+    app.hintMove = null;
   }
 
   function parseBoardCell(target) {
@@ -239,8 +435,38 @@
       return;
     }
     if (!hasAnyMove(app.board)) {
+      if (app.shuffleCharges > 0) {
+        toast("棋盘卡住了，试试洗牌按钮");
+        updateActionButtons();
+        return;
+      }
       endRun("棋盘无可消除组合，本局结束");
     }
+  }
+
+  function shuffleBoard() {
+    if (app.phase !== "collect" || app.locked || app.paused) return;
+    if (app.shuffleCharges <= 0) {
+      toast("本关洗牌次数已经用完");
+      return;
+    }
+    app.shuffleCharges -= 1;
+    app.selected = null;
+    clearWeakHint();
+    app.staleTurns = 0;
+    app.locked = true;
+    const nextState = buildShuffledBoardState();
+    app.board = nextState.board;
+    app.specials = nextState.specials;
+    app.collectTargets = nextState.targets;
+    app.collectTargetStates = nextState.targetStates;
+    app.boardFx = createCollectGrid(0);
+    refreshCollectTargets();
+    renderBoard(onCellTap);
+    drawProgress();
+    updateActionButtons();
+    app.locked = false;
+    toast("棋盘已洗牌，继续找目标豆");
   }
 
   function onPickColor(color) {
@@ -251,6 +477,8 @@
   function enterCraft() {
     app.phase = "craft";
     app.paused = false;
+    clearWeakHint();
+    app.staleTurns = 0;
     app.hasCraftPlaced = false;
     app.resources = { ...app.collected };
     app.activeColor = COLOR_KEYS.find((k) => app.resources[k] > 0) || "red";
@@ -295,6 +523,7 @@
     const tasks = [];
     matchCells.forEach(({ r, c }) => {
       const color = app.board[r][c];
+      if (!app.collectTargets?.[r]?.[c]) return;
       app.collected[color] += 1;
       addScore(10 + (chain - 1) * 4);
       const source = refs.board.querySelector(`[data-r="${r}"][data-c="${c}"] .bean`);
@@ -351,8 +580,34 @@
   async function resolveBoard(initialMatches) {
     let matches = initialMatches;
     let chain = 1;
+    let meaningfulProgress = false;
     while (matches.length) {
       const expandedMatches = expandMatchesWithSpecials(matches);
+      const collectCells = [];
+      const clearedCells = [];
+      let unlockedCount = 0;
+      let crackedCount = 0;
+      let anyTargetTouched = false;
+      expandedMatches.forEach(({ r, c }) => {
+        const isTarget = app.collectTargets?.[r]?.[c];
+        const targetState = app.collectTargetStates?.[r]?.[c];
+        if (isTarget) {
+          anyTargetTouched = true;
+          meaningfulProgress = true;
+        }
+        if (targetState === "lock") {
+          app.collectTargetStates[r][c] = null;
+          unlockedCount += 1;
+          return;
+        }
+        if (targetState === "ice") {
+          app.collectTargetStates[r][c] = "cracked";
+          crackedCount += 1;
+          return;
+        }
+        if (isTarget) collectCells.push({ r, c });
+        clearedCells.push({ r, c });
+      });
       const reward = pickSpecialReward(expandedMatches);
       renderBoard(onCellTap);
       markMatches(expandedMatches, chain);
@@ -362,18 +617,25 @@
         sfxCombo(chain);
         showCombo(chain, expandedMatches.length);
       }
-      await animateCollect(expandedMatches, chain);
-      expandedMatches.forEach(({ r, c }) => {
+      if (!anyTargetTouched && chain === 1) toast("只有带星目标豆才会计入收集");
+      else if (unlockedCount > 0 && crackedCount > 0) toast(`解锁 ${unlockedCount} 颗，冰裂 ${crackedCount} 颗`);
+      else if (unlockedCount > 0) toast(`锁定目标豆已解锁 ${unlockedCount} 颗`);
+      else if (crackedCount > 0) toast(`冰冻目标豆已敲裂 ${crackedCount} 颗`);
+      await animateCollect(collectCells, chain);
+      clearedCells.forEach(({ r, c }) => {
         app.board[r][c] = null;
         app.specials[r][c] = null;
+        app.collectTargets[r][c] = false;
+        app.collectTargetStates[r][c] = null;
       });
       app.boardFx = createCollectGrid(0);
       renderBoard(onCellTap);
       await new Promise((resolve) => setTimeout(resolve, 140));
-      app.boardFx = collapse(app.board, app.specials);
+      app.boardFx = collapse(app.board, app.specials, app.collectTargets, app.collectTargetStates);
       if (reward && app.board[reward.r]?.[reward.c]) {
         app.specials[reward.r][reward.c] = reward.type;
       }
+      refreshCollectTargets();
       drawProgress();
       renderBoard(onCellTap);
       await new Promise((resolve) => setTimeout(resolve, 380));
@@ -382,6 +644,13 @@
     }
     app.comboChain = 0;
     app.locked = false;
+    if (meaningfulProgress) {
+      app.staleTurns = 0;
+      clearWeakHint();
+    } else {
+      app.staleTurns += 1;
+      maybeShowWeakHint();
+    }
 
     if (isCollectDone(app)) {
       enterCraft();
@@ -393,6 +662,7 @@
   function onCellTap(r, c) {
     if (app.phase !== "collect" || app.locked || app.paused) return;
     if (!app.selected) {
+      clearWeakHint();
       app.selected = { r, c };
       renderBoard(onCellTap);
       return;
@@ -411,6 +681,7 @@
     app.locked = true;
     swap(app.board, app.selected, { r, c });
     swapSpecials(app.selected, { r, c });
+    swapTargets(app.selected, { r, c });
     app.steps -= 1;
     refs.stepText.textContent = app.steps;
     refs.timerText.textContent = `步数 ${app.steps}`;
@@ -421,8 +692,11 @@
     if (!matches.length) {
       swap(app.board, app.selected, { r, c });
       swapSpecials(app.selected, { r, c });
+      swapTargets(app.selected, { r, c });
       app.selected = null;
       app.locked = false;
+      app.staleTurns += 1;
+      maybeShowWeakHint();
       toast("没有形成消除");
       renderBoard(onCellTap);
       checkCollectFail();
@@ -510,6 +784,7 @@
   }
 
   function endRun(detail) {
+    const compareEnabled = app.phase === "craft";
     app.phase = "done";
     app.paused = false;
     app.locked = false;
@@ -528,7 +803,6 @@
     list.push(record);
     list.sort((a, b) => b.score - a.score || b.levels - a.levels);
     saveLeaderboard(list);
-    const compareEnabled = app.phase === "craft";
     if (compareEnabled) {
       refs.resultCompare.classList.remove("hidden");
       drawPatternGrid(refs.answerGrid, app.targetMap, "compare-cell");
@@ -574,6 +848,11 @@
     app.resources = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
     app.boardFx = createCollectGrid(0);
     app.specials = createCollectGrid(null);
+    app.collectTargets = createCollectGrid(false);
+    app.collectTargetStates = createCollectGrid(null);
+    app.shuffleCharges = 1;
+    app.staleTurns = 0;
+    app.hintMove = null;
     app.placed = Array.from({ length: app.craftSize }, () => Array(app.craftSize).fill(null));
     app.activeColor = null;
     app.locked = false;
@@ -593,6 +872,7 @@
     updateRunStats();
 
     app.board = createBoard();
+    refreshCollectTargets();
     drawMini(refs.miniTarget);
     drawMini(refs.overlayMini);
     drawNeedList();
@@ -677,6 +957,7 @@
     else pauseGame();
   };
   refs.restartGameBtn.onclick = resetGame;
+  refs.shuffleBtn.onclick = shuffleBoard;
   refs.resumeBtn.onclick = resumeGame;
   refs.pauseRestartBtn.onclick = resetGame;
   refs.shareGameBtn.onclick = () => shareGame("我在玩拼豆猫，来一起拼小动物吧。");

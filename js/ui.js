@@ -18,6 +18,12 @@
     const running = app.phase === "collect" || app.phase === "craft";
     refs.pauseBtn.classList.toggle("hidden", !running);
     refs.restartGameBtn.classList.toggle("hidden", !running);
+    if (refs.shuffleBtn) {
+      const canShuffle = app.phase === "collect" && !app.paused && !app.locked;
+      refs.shuffleBtn.classList.toggle("hidden", app.phase !== "collect");
+      refs.shuffleBtn.disabled = !canShuffle || app.shuffleCharges <= 0;
+      refs.shuffleBtn.textContent = app.shuffleCharges > 0 ? `洗牌 ${app.shuffleCharges}` : "洗牌 0";
+    }
     refs.pauseBtn.textContent = app.paused ? "继续" : "暂停";
   }
 
@@ -213,13 +219,17 @@
       if (app.needed[k] > 0 && remain === 0) el.classList.add("done");
       else if (app.needed[k] > 0 && remain === focusRemain && focusRemain > 0) el.classList.add("urgent");
       el.dataset.color = k;
-      el.innerHTML = `<div class="dot" style="background:${COLORS[k].hex}"></div><strong>${remain}</strong><small>${COLORS[k].name}</small>`;
+      el.innerHTML = `<div class="dot" style="background:${COLORS[k].hex}"></div><strong>${remain}</strong><small>${COLORS[k].name}目标豆</small>`;
       refs.progressBoard.appendChild(el);
     });
   }
 
   function drawNeedList() {
     refs.needList.innerHTML = "";
+    const hint = document.createElement("span");
+    hint.className = "need need-hint";
+    hint.textContent = "星标有效；锁链先解锁；冰冻需敲两次";
+    refs.needList.appendChild(hint);
     COLOR_KEYS.forEach((k) => {
       const need = app.needed[k];
       if (!need) return;
@@ -241,6 +251,12 @@
         cell.type = "button";
         cell.className = "cell";
         if (app.selected && app.selected.r === r && app.selected.c === c) cell.classList.add("selected");
+        if (
+          app.hintMove &&
+          ((app.hintMove.a.r === r && app.hintMove.a.c === c) || (app.hintMove.b.r === r && app.hintMove.b.c === c))
+        ) {
+          cell.classList.add("hinted");
+        }
         cell.dataset.r = r;
         cell.dataset.c = c;
         if (color) {
@@ -252,16 +268,32 @@
           const bean = document.createElement("div");
           bean.className = "bean";
           const special = app.specials?.[r]?.[c];
+          const isTarget = app.collectTargets?.[r]?.[c];
+          const targetState = app.collectTargetStates?.[r]?.[c];
           if (special) {
             bean.classList.add("special");
             bean.dataset.special = special;
           }
+          if (isTarget) bean.classList.add("target-bean");
+          if (targetState) bean.dataset.targetState = targetState;
           if (fxMap[r][c] > 0) {
             bean.classList.add("drop");
             bean.style.setProperty("--fall-distance", `${fxMap[r][c]}`);
             bean.style.setProperty("--fall-delay", `${c * 18}ms`);
           }
           bean.style.background = COLORS[color].hex;
+          if (isTarget) {
+            const marker = document.createElement("span");
+            marker.className = "target-marker";
+            marker.textContent = "★";
+            bean.appendChild(marker);
+          }
+          if (targetState) {
+            const badge = document.createElement("span");
+            badge.className = `target-state-badge target-state-${targetState}`;
+            badge.textContent = targetState === "lock" ? "锁" : targetState === "ice" ? "冰" : "裂";
+            bean.appendChild(badge);
+          }
           cell.appendChild(bean);
         }
         refs.board.appendChild(cell);

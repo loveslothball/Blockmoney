@@ -74,7 +74,7 @@
     return b;
   }
 
-  function collapse(board, specials) {
+  function collapse(board, specials, targets, targetStates) {
     const randomColor = G.utils.randomColor;
     const size = getSize(board);
     const fx = Array.from({ length: size }, () => Array(size).fill(0));
@@ -84,16 +84,24 @@
         if (!board[read][c]) continue;
         const color = board[read][c];
         const special = specials ? specials[read][c] : null;
+        const target = targets ? targets[read][c] : false;
+        const targetState = targetStates ? targetStates[read][c] : null;
         board[read][c] = null;
         if (specials) specials[read][c] = null;
+        if (targets) targets[read][c] = false;
+        if (targetStates) targetStates[read][c] = null;
         board[write][c] = color;
         if (specials) specials[write][c] = special;
+        if (targets) targets[write][c] = target;
+        if (targetStates) targetStates[write][c] = targetState;
         fx[write][c] = Math.max(write - read, 0);
         write -= 1;
       }
       while (write >= 0) {
         board[write][c] = randomColor();
         if (specials) specials[write][c] = null;
+        if (targets) targets[write][c] = false;
+        if (targetStates) targetStates[write][c] = null;
         fx[write][c] = write + 1;
         write -= 1;
       }
