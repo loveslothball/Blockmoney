@@ -57,14 +57,49 @@
     return Math.max((app.needed[color] || 0) - (app.collected[color] || 0), 0);
   }
 
-  function pickTargetState() {
+  function collectProgressRatio() {
+    const totalNeed = COLOR_KEYS.reduce((sum, color) => sum + (app.needed[color] || 0), 0);
+    const totalCollected = COLOR_KEYS.reduce((sum, color) => sum + (app.collected[color] || 0), 0);
+    if (!totalNeed) return 0;
+    return totalCollected / totalNeed;
+  }
+
+  function getCollectFlowProfile() {
+    const progress = collectProgressRatio();
+    const levelBias = Math.min(app.level, 10);
+    if (progress < 0.34) {
+      return {
+        desiredPerColor: 1 + Math.floor(levelBias / 4),
+        desiredTotal: Math.min(12, 7 + Math.floor(levelBias / 3)),
+        lockChance: levelBias >= 4 ? 0.08 : 0,
+        iceChance: 0
+      };
+    }
+    if (progress < 0.74) {
+      return {
+        desiredPerColor: 2 + Math.floor(levelBias / 3),
+        desiredTotal: Math.min(18, 9 + Math.floor(levelBias / 2)),
+        lockChance: Math.min(0.22, 0.08 + levelBias * 0.012),
+        iceChance: levelBias >= 6 ? Math.min(0.12, 0.03 + levelBias * 0.008) : 0
+      };
+    }
+    return {
+      desiredPerColor: 2 + Math.floor(levelBias / 4),
+      desiredTotal: Math.min(14, 8 + Math.floor(levelBias / 3)),
+      lockChance: Math.min(0.14, 0.05 + levelBias * 0.008),
+      iceChance: levelBias >= 7 ? Math.min(0.08, 0.02 + levelBias * 0.005) : 0
+    };
+  }
+
+  function pickTargetState(profile) {
     const roll = Math.random();
-    if (app.level >= 5 && roll < Math.min(0.14, 0.06 + app.level * 0.01)) return "ice";
-    if (app.level >= 2 && roll < Math.min(0.34, 0.16 + app.level * 0.015)) return "lock";
+    if (profile.iceChance > 0 && roll < profile.iceChance) return "ice";
+    if (profile.lockChance > 0 && roll < profile.iceChance + profile.lockChance) return "lock";
     return null;
   }
 
   function refreshCollectTargets() {
+    const profile = getCollectFlowProfile();
     const nextTargets = createCollectGrid(false);
     const nextStates = createCollectGrid(null);
     const positionsByColor = Object.fromEntries(COLOR_KEYS.map((key) => [key, []]));
@@ -88,19 +123,19 @@
       const remain = remainingNeed(color);
       const desiredCount = Math.min(
         positionsByColor[color].length,
-        Math.max(1, Math.min(remain, 2 + Math.floor(app.level / 3)))
+        Math.max(1, Math.min(remain, profile.desiredPerColor))
       );
       for (let i = currentCount[color]; i < desiredCount; i += 1) {
         const pos = positionsByColor[color].find(({ r, c }) => !nextTargets[r][c]);
         if (!pos) break;
         nextTargets[pos.r][pos.c] = true;
-        nextStates[pos.r][pos.c] = pickTargetState();
+        nextStates[pos.r][pos.c] = pickTargetState(profile);
         currentCount[color] += 1;
       }
     });
 
     let totalMarked = nextTargets.flat().filter(Boolean).length;
-    const desiredTotal = Math.min(18, Math.max(8, 10 + Math.floor(app.level / 2)));
+    const desiredTotal = profile.desiredTotal;
     const colorCycle = shuffleList(
       activeColors.slice().sort((a, b) => remainingNeed(b) - remainingNeed(a))
     );
@@ -113,7 +148,7 @@
       const pos = positionsByColor[color].find(({ r, c }) => !nextTargets[r][c]);
       if (!pos) continue;
       nextTargets[pos.r][pos.c] = true;
-      nextStates[pos.r][pos.c] = pickTargetState();
+      nextStates[pos.r][pos.c] = pickTargetState(profile);
       totalMarked += 1;
     }
 
