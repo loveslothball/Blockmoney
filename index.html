@@ -17,11 +17,11 @@
         --gold: #d09c33;
         --danger: #d84b52;
         --ok: #1fae75;
-        --blue: #4a7de6;
-        --red: #e25c5c;
-        --green: #4fb983;
-        --yellow: #f0c54f;
-        --purple: #7a62d9;
+        --blue: #72c5ff;
+        --red: #ff7f96;
+        --green: #69d8a7;
+        --yellow: #ffd86f;
+        --purple: #b89cff;
         --pixel-shadow: 4px 4px 0 #312d3c;
       }
 
@@ -85,11 +85,13 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
         padding: 10px 12px;
         border-radius: 8px;
         background: #fff8e7;
         border: 2px solid var(--line);
         box-shadow: var(--pixel-shadow);
+        gap: 8px;
       }
       .phone.hard-mode .topbar {
         background: #ffe3e1;
@@ -124,6 +126,8 @@
         display: flex;
         align-items: center;
         gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
       }
       .run-stats {
         font-size: 10px;
@@ -163,6 +167,23 @@
         font-size: 10px;
         padding: 0 8px;
         cursor: pointer;
+      }
+      .control-bar {
+        display: flex;
+        gap: 8px;
+      }
+      .control-btn {
+        min-height: 40px;
+        border: 2px solid var(--line);
+        border-radius: 6px;
+        background: #fffdf4;
+        color: var(--ink);
+        font-size: 10px;
+        padding: 0 10px;
+        cursor: pointer;
+      }
+      .control-btn.hidden {
+        display: none;
       }
 
       .timer.warn {
@@ -445,6 +466,7 @@
         display: flex;
         justify-content: center;
         gap: 10px;
+        flex-wrap: wrap;
       }
       .menu-btn {
         border: 2px solid #fff;
@@ -532,6 +554,40 @@
       .leaderboard li.current {
         color: var(--ink);
         font-weight: 700;
+      }
+      .stats-strip {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .stat-pill {
+        border: 2px solid rgba(255, 255, 255, 0.24);
+        border-radius: 6px;
+        padding: 10px 8px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .stat-pill strong {
+        display: block;
+        font-size: 16px;
+        color: #fff;
+      }
+      .stat-pill span {
+        display: block;
+        margin-top: 4px;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.8);
+      }
+      .help-copy {
+        margin-top: 12px;
+        text-align: left;
+        display: grid;
+        gap: 8px;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+      .help-copy strong {
+        color: #fff;
       }
 
       .iron-sweep {
@@ -640,6 +696,11 @@
             <span class="run-stats" id="runStats">Lv.1 · 0分</span>
             <span class="hard-badge hidden" id="hardBadge">警报</span>
             <span class="timer" id="timerText">步数 24</span>
+            <div class="control-bar">
+              <button id="helpBtn" class="control-btn" type="button" aria-label="查看玩法说明">说明</button>
+              <button id="pauseBtn" class="control-btn hidden" type="button" aria-label="暂停或继续游戏">暂停</button>
+              <button id="restartGameBtn" class="control-btn hidden" type="button" aria-label="重新开始游戏">重开</button>
+            </div>
             <button id="soundBtn" class="sound-btn" type="button" aria-label="切换音效">音效开</button>
             <button id="shareBtn" class="share-btn" type="button" aria-label="分享游戏">分享</button>
           </div>
@@ -684,9 +745,47 @@
         <div class="overlay-card">
           <h2>拼豆猫</h2>
           <p>随机小动物拼豆闯关，挑战你的最高分。</p>
+          <div class="stats-strip">
+            <div class="stat-pill">
+              <strong id="bestScore">0</strong>
+              <span>最高分</span>
+            </div>
+            <div class="stat-pill">
+              <strong id="bestLevel">0</strong>
+              <span>最高通关</span>
+            </div>
+          </div>
           <div class="menu-actions">
             <button id="startGameBtn" class="menu-btn" type="button">开始游戏</button>
+            <button id="helpMenuBtn" class="menu-btn" type="button">玩法说明</button>
             <button id="shareGameBtn" class="menu-btn" type="button">分享游戏</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="helpLayer">
+        <div class="overlay-card">
+          <h2>玩法说明</h2>
+          <p>先收集颜色豆，再按目标图把小动物拼出来。</p>
+          <div class="help-copy">
+            <div><strong>阶段一：</strong>点击两个相邻豆子交换，凑成三个及以上同色即可消除并收集。</div>
+            <div><strong>阶段二：</strong>选择下方颜色豆，放到对应的目标格里，颜色必须完全匹配。</div>
+            <div><strong>失败条件：</strong>步数耗尽、棋盘无可走步，或拼搭倒计时结束。</div>
+            <div><strong>技巧：</strong>优先凑目标里缺得最多的颜色，超难关会在每 5 关出现。</div>
+          </div>
+          <div class="menu-actions">
+            <button id="closeHelpBtn" class="menu-btn" type="button">知道了</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="pauseLayer">
+        <div class="overlay-card">
+          <h2>已暂停</h2>
+          <p id="pauseText">休息一下，准备好再继续。</p>
+          <div class="menu-actions">
+            <button id="resumeBtn" class="menu-btn" type="button">继续游戏</button>
+            <button id="pauseRestartBtn" class="menu-btn" type="button">重新开始</button>
           </div>
         </div>
       </div>
@@ -709,11 +808,11 @@
 
     <script>
       const COLORS = {
-        red: { name: "红", hex: "var(--red)", soft: "rgba(226,92,92,0.26)" },
-        blue: { name: "蓝", hex: "var(--blue)", soft: "rgba(74,125,230,0.24)" },
-        green: { name: "绿", hex: "var(--green)", soft: "rgba(79,185,131,0.24)" },
-        yellow: { name: "黄", hex: "var(--yellow)", soft: "rgba(240,197,79,0.24)" },
-        purple: { name: "紫", hex: "var(--purple)", soft: "rgba(122,98,217,0.24)" }
+        red: { name: "粉", hex: "var(--red)", soft: "rgba(255,127,150,0.24)" },
+        blue: { name: "蓝", hex: "var(--blue)", soft: "rgba(114,197,255,0.24)" },
+        green: { name: "绿", hex: "var(--green)", soft: "rgba(105,216,167,0.24)" },
+        yellow: { name: "黄", hex: "var(--yellow)", soft: "rgba(255,216,111,0.24)" },
+        purple: { name: "紫", hex: "var(--purple)", soft: "rgba(184,156,255,0.24)" }
       };
       const COLOR_KEYS = Object.keys(COLORS);
       const SIZE = 8;
@@ -730,34 +829,34 @@
             [1, 1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1, 1],
             [0, 1, 1, 1, 1, 1, 1, 0],
-            [0, 0, 1, 1, 1, 1, 0, 0],
-            [0, 1, 1, 0, 0, 1, 1, 0],
-            [1, 0, 0, 1, 1, 0, 0, 1]
+            [0, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 0, 1, 1, 0, 1, 0],
+            [0, 0, 1, 0, 0, 1, 0, 0]
           ]
         },
         {
           name: "兔兔",
           mask: [
-            [0, 1, 0, 0, 0, 0, 1, 0],
-            [0, 1, 0, 0, 0, 0, 1, 0],
+            [1, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 0, 0, 0, 0, 1, 1],
             [0, 1, 1, 1, 1, 1, 1, 0],
             [1, 1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1, 1],
             [0, 1, 1, 1, 1, 1, 1, 0],
-            [0, 0, 1, 1, 1, 1, 0, 0],
-            [0, 1, 0, 1, 1, 0, 1, 0]
+            [0, 0, 1, 1, 1, 1, 0, 0]
           ]
         },
         {
           name: "小鱼",
           mask: [
             [0, 0, 0, 1, 1, 0, 0, 0],
-            [0, 0, 1, 1, 1, 1, 0, 0],
-            [1, 1, 1, 1, 1, 1, 1, 1],
-            [0, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 0],
-            [1, 1, 1, 1, 1, 1, 1, 1],
-            [0, 0, 1, 1, 1, 1, 0, 0],
+            [0, 0, 1, 1, 1, 1, 0, 1],
+            [0, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1],
+            [0, 0, 1, 1, 1, 1, 0, 1],
             [0, 0, 0, 1, 1, 0, 0, 0]
           ]
         },
@@ -770,8 +869,8 @@
             [1, 1, 1, 1, 1, 1, 1, 1],
             [1, 1, 1, 1, 1, 1, 1, 1],
             [0, 1, 1, 1, 1, 1, 1, 0],
-            [0, 0, 1, 1, 1, 1, 0, 0],
-            [0, 1, 0, 1, 1, 0, 1, 0]
+            [0, 1, 0, 1, 1, 0, 1, 0],
+            [1, 0, 0, 1, 1, 0, 0, 1]
           ]
         },
         {
@@ -809,7 +908,8 @@
         activeColor: null,
         craftTime: NORMAL_CRAFT_TIME,
         craftTimer: null,
-        locked: false
+        locked: false,
+        paused: false
       };
 
       const refs = {
@@ -842,7 +942,19 @@
         shareBtn: document.getElementById("shareBtn"),
         hardBadge: document.getElementById("hardBadge"),
         appRoot: document.getElementById("app"),
-        runStats: document.getElementById("runStats")
+        runStats: document.getElementById("runStats"),
+        helpBtn: document.getElementById("helpBtn"),
+        pauseBtn: document.getElementById("pauseBtn"),
+        restartGameBtn: document.getElementById("restartGameBtn"),
+        helpMenuBtn: document.getElementById("helpMenuBtn"),
+        helpLayer: document.getElementById("helpLayer"),
+        closeHelpBtn: document.getElementById("closeHelpBtn"),
+        pauseLayer: document.getElementById("pauseLayer"),
+        pauseText: document.getElementById("pauseText"),
+        resumeBtn: document.getElementById("resumeBtn"),
+        pauseRestartBtn: document.getElementById("pauseRestartBtn"),
+        bestScore: document.getElementById("bestScore"),
+        bestLevel: document.getElementById("bestLevel")
       };
 
       const audio = {
@@ -976,12 +1088,13 @@
         const activeCount = Math.min(5, 3 + Math.floor((level - 1) / 2));
         const palette = shuffle(COLOR_KEYS).slice(0, activeCount);
         const map = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
-        let idx = 0;
         for (let r = 0; r < SIZE; r += 1) {
           for (let c = 0; c < SIZE; c += 1) {
             if (!mask[r][c]) continue;
-            map[r][c] = palette[(idx + r + c + level) % palette.length];
-            idx += 1;
+            const rowBand = Math.floor((r / SIZE) * activeCount);
+            const colBand = Math.floor((Math.min(c, SIZE - 1 - c) / Math.ceil(SIZE / 2)) * Math.max(1, activeCount - 1));
+            const zone = (rowBand + colBand + (level % activeCount)) % activeCount;
+            map[r][c] = palette[zone];
           }
         }
         return { map, animalName: animal.name };
@@ -1048,6 +1161,62 @@
           li.textContent = `#${i + 1} ${it.score}分 · 通关${it.levels}关`;
           refs.leaderboardList.appendChild(li);
         });
+      }
+
+      function updateBestStats() {
+        const list = getLeaderboard();
+        const best = list[0] || { score: 0, levels: 0 };
+        refs.bestScore.textContent = `${best.score}`;
+        refs.bestLevel.textContent = `${best.levels}`;
+      }
+
+      function updateActionButtons() {
+        const running = app.phase === "collect" || app.phase === "craft";
+        refs.pauseBtn.classList.toggle("hidden", !running);
+        refs.restartGameBtn.classList.toggle("hidden", !running);
+        refs.pauseBtn.textContent = app.paused ? "继续" : "暂停";
+      }
+
+      function showHelp() {
+        refs.helpLayer.classList.remove("hidden");
+      }
+
+      function hideHelp() {
+        refs.helpLayer.classList.add("hidden");
+      }
+
+      function startCraftTimer() {
+        clearInterval(app.craftTimer);
+        app.craftTimer = setInterval(() => {
+          app.craftTime -= 1;
+          updateCraftTimer();
+          if (app.craftTime <= 0) {
+            clearInterval(app.craftTimer);
+            endRun("时间到，拼搭失败");
+          }
+        }, 1000);
+      }
+
+      function pauseGame() {
+        if (app.paused || (app.phase !== "collect" && app.phase !== "craft")) return;
+        app.paused = true;
+        if (app.phase === "craft") clearInterval(app.craftTimer);
+        app.locked = true;
+        refs.pauseText.textContent =
+          app.phase === "craft"
+            ? `当前是拼搭阶段，还剩 ${app.craftTime} 秒。`
+            : `当前是收集阶段，还剩 ${app.steps} 步。`;
+        refs.pauseLayer.classList.remove("hidden");
+        updateActionButtons();
+      }
+
+      function resumeGame() {
+        if (!app.paused) return;
+        app.paused = false;
+        refs.pauseLayer.classList.add("hidden");
+        app.locked = false;
+        if (app.phase === "craft") startCraftTimer();
+        updateActionButtons();
       }
 
       async function shareGame(extra = "") {
@@ -1138,7 +1307,7 @@
       }
 
       function onCellTap(r, c, element) {
-        if (app.phase !== "collect" || app.locked) return;
+        if (app.phase !== "collect" || app.locked || app.paused) return;
         if (!app.selected) {
           app.selected = { r, c };
           renderBoard();
@@ -1320,6 +1489,7 @@
 
       function enterCraft() {
         app.phase = "craft";
+        app.paused = false;
         app.resources = { ...app.collected };
         app.activeColor = COLOR_KEYS.find((k) => app.resources[k] > 0) || "red";
         refs.collectPhase.classList.add("phase-hidden");
@@ -1330,14 +1500,8 @@
         drawCraft();
         drawResources();
         toast(`进入拼搭阶段，${app.craftTime} 秒内完成`);
-        app.craftTimer = setInterval(() => {
-          app.craftTime -= 1;
-          updateCraftTimer();
-          if (app.craftTime <= 0) {
-            clearInterval(app.craftTimer);
-            endRun("时间到，拼搭失败");
-          }
-        }, 1000);
+        startCraftTimer();
+        updateActionButtons();
       }
 
       function updateCraftTimer() {
@@ -1395,7 +1559,7 @@
       }
 
       function onCraftCell(r, c, cellEl) {
-        if (app.phase !== "craft") return;
+        if (app.phase !== "craft" || app.paused) return;
         const target = app.targetMap[r][c];
         const placed = app.placed[r][c];
 
@@ -1471,6 +1635,7 @@
 
       function endRun(detail) {
         app.phase = "done";
+        app.paused = false;
         clearInterval(app.craftTimer);
         sfxFail();
         const record = {
@@ -1485,11 +1650,15 @@
         refs.resultTitle.textContent = "本局结束";
         refs.resultText.textContent = `${detail}。本次通关 ${app.clearedLevels} 关，总分 ${app.score} 分。`;
         renderLeaderboard(record.id);
+        updateBestStats();
+        refs.pauseLayer.classList.add("hidden");
         refs.resultLayer.classList.remove("hidden");
+        updateActionButtons();
       }
 
       function startLevel(showIntro) {
         app.phase = "collect";
+        app.paused = false;
         app.hardLevel = isHardLevel(app.level);
         applyDifficultyUI();
         app.steps = levelStepLimit(app.level);
@@ -1508,6 +1677,8 @@
         refs.timerText.textContent = `步数 ${app.steps}`;
         refs.stepText.textContent = app.steps;
         refs.resultLayer.classList.add("hidden");
+        refs.pauseLayer.classList.add("hidden");
+        refs.helpLayer.classList.add("hidden");
         refs.collectPhase.classList.remove("phase-hidden");
         refs.craftPhase.classList.add("phase-hidden");
         updateRunStats();
@@ -1528,10 +1699,12 @@
         setTimeout(() => {
           refs.introOverlay.classList.add("hidden");
         }, introMs);
+        updateActionButtons();
       }
 
       function resetGame() {
         clearInterval(app.craftTimer);
+        app.paused = false;
         app.level = 1;
         app.clearedLevels = 0;
         app.score = 0;
@@ -1542,12 +1715,17 @@
 
       function showStartMenu() {
         app.phase = "idle";
+        app.paused = false;
         app.hardLevel = false;
         applyDifficultyUI();
         refs.startLayer.classList.remove("hidden");
         refs.introOverlay.classList.add("hidden");
         refs.resultLayer.classList.add("hidden");
+        refs.pauseLayer.classList.add("hidden");
+        refs.helpLayer.classList.add("hidden");
         renderLeaderboard();
+        updateBestStats();
+        updateActionButtons();
       }
 
       refs.restartBtn.onclick = resetGame;
@@ -1556,6 +1734,16 @@
         refs.startLayer.classList.add("hidden");
         resetGame();
       };
+      refs.helpMenuBtn.onclick = showHelp;
+      refs.helpBtn.onclick = showHelp;
+      refs.closeHelpBtn.onclick = hideHelp;
+      refs.pauseBtn.onclick = () => {
+        if (app.paused) resumeGame();
+        else pauseGame();
+      };
+      refs.restartGameBtn.onclick = resetGame;
+      refs.resumeBtn.onclick = resumeGame;
+      refs.pauseRestartBtn.onclick = resetGame;
       refs.shareGameBtn.onclick = () => shareGame("我在玩拼豆猫，来一起拼小动物吧。");
       refs.soundBtn.onclick = () => {
         ensureAudio();
