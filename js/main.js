@@ -108,7 +108,7 @@
     refs.collectPhase.classList.add("phase-hidden");
     refs.craftPhase.classList.remove("phase-hidden");
     refs.phaseLabel.textContent = `第${app.level}关${app.hardLevel ? " · 超难" : ""} · 拼搭图案`;
-    app.craftTime = levelCraftTime(app.level);
+    app.craftTime = levelCraftTime(app.targetMap, app.hardLevel);
     updateCraftTimer();
     drawCraft(onCraftCell);
     drawResources(onPickColor);
@@ -191,10 +191,13 @@
       matches.forEach(({ r, c }) => {
         app.board[r][c] = null;
       });
-      collapse(app.board);
+      app.boardFx = Array.from({ length: G.constants.SIZE }, () => Array(G.constants.SIZE).fill(0));
+      renderBoard(onCellTap);
+      await new Promise((resolve) => setTimeout(resolve, 140));
+      app.boardFx = collapse(app.board);
       drawProgress();
       renderBoard(onCellTap);
-      await new Promise((resolve) => setTimeout(resolve, 220));
+      await new Promise((resolve) => setTimeout(resolve, 380));
       matches = findMatches(app.board);
       chain += 1;
     }
@@ -360,6 +363,7 @@
     app.needed = initNeeded(app.targetMap);
     app.collected = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
     app.resources = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
+    app.boardFx = Array.from({ length: G.constants.SIZE }, () => Array(G.constants.SIZE).fill(0));
     app.placed = Array.from({ length: G.constants.SIZE }, () => Array(G.constants.SIZE).fill(null));
     app.activeColor = null;
     app.locked = false;
@@ -383,7 +387,10 @@
     drawProgress();
     renderBoard(onCellTap);
     refs.introTitle.textContent = `${app.currentAnimal}拼豆图`;
-    refs.introDesc.textContent = `${app.hardLevel ? "超难关" : "普通关"}：先收集再拼搭，拼豆时间 ${levelCraftTime(app.level)} 秒`;
+    refs.introDesc.textContent = `${app.hardLevel ? "超难关" : "普通关"}：先收集再拼搭，拼豆时间 ${levelCraftTime(
+      app.targetMap,
+      app.hardLevel
+    )} 秒`;
     if (app.hardLevel) sfxHardAlert();
     refreshBgm();
 

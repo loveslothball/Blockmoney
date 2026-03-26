@@ -70,15 +70,24 @@
 
   function collapse(board) {
     const randomColor = G.utils.randomColor;
+    const fx = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
     for (let c = 0; c < SIZE; c += 1) {
-      const stack = [];
-      for (let r = SIZE - 1; r >= 0; r -= 1) {
-        if (board[r][c]) stack.push(board[r][c]);
+      let write = SIZE - 1;
+      for (let read = SIZE - 1; read >= 0; read -= 1) {
+        if (!board[read][c]) continue;
+        const color = board[read][c];
+        board[read][c] = null;
+        board[write][c] = color;
+        fx[write][c] = Math.max(write - read, 0);
+        write -= 1;
       }
-      for (let r = SIZE - 1; r >= 0; r -= 1) {
-        board[r][c] = stack.shift() || randomColor();
+      while (write >= 0) {
+        board[write][c] = randomColor();
+        fx[write][c] = write + 1;
+        write -= 1;
       }
     }
+    return fx;
   }
 
   function isCollectDone(app) {

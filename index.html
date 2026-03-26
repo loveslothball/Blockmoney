@@ -339,6 +339,10 @@
         transition: transform 240ms ease-out, opacity 200ms ease-out, filter 200ms ease-out;
       }
 
+      .bean.drop {
+        animation: beanDrop calc(150ms + var(--fall-distance, 1) * 70ms) cubic-bezier(0.2, 0.85, 0.25, 1) both;
+      }
+
       .cell.matching .bean {
         transform: scale(1.18);
         filter: brightness(1.18) saturate(1.2);
@@ -899,6 +903,21 @@
         100% {
           opacity: 0;
           transform: scale(2.8);
+        }
+      }
+
+      @keyframes beanDrop {
+        0% {
+          transform: translateY(calc(var(--fall-distance, 1) * -118%));
+          opacity: 0.55;
+        }
+        70% {
+          transform: translateY(8%);
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(0);
+          opacity: 1;
         }
       }
 

@@ -177,24 +177,37 @@
   }
 
   function renderBoard(onCellTap) {
+    const fxMap = app.boardFx || Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
     refs.board.innerHTML = "";
     for (let r = 0; r < SIZE; r += 1) {
       for (let c = 0; c < SIZE; c += 1) {
+        const color = app.board[r][c];
         const cell = document.createElement("button");
         cell.type = "button";
         cell.className = "cell";
         if (app.selected && app.selected.r === r && app.selected.c === c) cell.classList.add("selected");
         cell.dataset.r = r;
         cell.dataset.c = c;
-        cell.setAttribute("aria-label", `棋盘第${r + 1}行第${c + 1}列，豆子颜色${COLORS[app.board[r][c]].name}`);
+        if (color) {
+          cell.setAttribute("aria-label", `棋盘第${r + 1}行第${c + 1}列，豆子颜色${COLORS[color].name}`);
+        } else {
+          cell.setAttribute("aria-label", `棋盘第${r + 1}行第${c + 1}列，空格`);
+        }
         cell.onclick = () => onCellTap(r, c, cell);
-        const bean = document.createElement("div");
-        bean.className = "bean";
-        bean.style.background = COLORS[app.board[r][c]].hex;
-        cell.appendChild(bean);
+        if (color) {
+          const bean = document.createElement("div");
+          bean.className = "bean";
+          if (fxMap[r][c] > 0) {
+            bean.classList.add("drop");
+            bean.style.setProperty("--fall-distance", `${fxMap[r][c]}`);
+          }
+          bean.style.background = COLORS[color].hex;
+          cell.appendChild(bean);
+        }
         refs.board.appendChild(cell);
       }
     }
+    app.boardFx = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
   }
 
   function drawCraft(onCraftCell) {
