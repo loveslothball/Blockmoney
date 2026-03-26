@@ -313,8 +313,10 @@
 
   function initNeeded(targetMap) {
     const needed = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
-    targetMap.flat().forEach((c) => {
-      if (c) needed[c] += 1;
+    targetMap.forEach((row) => {
+      row.forEach((c) => {
+        if (c) needed[c] += 1;
+      });
     });
     return needed;
   }
@@ -324,10 +326,17 @@
   }
 
   function levelCraftTime(targetMap, hardLevel = false) {
-    const filled = targetMap.flat().filter(Boolean).length;
-    const activeColors = new Set(targetMap.flat().filter(Boolean)).size;
+    let filled = 0;
+    const activeColors = new Set();
+    targetMap.forEach((row) => {
+      row.forEach((cell) => {
+        if (!cell) return;
+        filled += 1;
+        activeColors.add(cell);
+      });
+    });
     const gridSize = targetMap.length;
-    const base = 18 + Math.round(filled * 0.36) + activeColors * 2 + Math.max(0, gridSize - 8) * 5;
+    const base = 18 + Math.round(filled * 0.36) + activeColors.size * 2 + Math.max(0, gridSize - 8) * 5;
     return base + (hardLevel ? 8 : 0);
   }
 

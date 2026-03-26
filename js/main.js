@@ -34,6 +34,7 @@
   const { ensureAudio, sfxMatch, sfxCombo, sfxPlace, sfxFail, sfxSuccess, sfxHardAlert, sfxPhaseShift, startBgm, stopBgm, refreshBgm, updateSoundButton } =
     G.audioApi;
   const audio = G.audio;
+  const isWechatBrowser = /MicroMessenger/i.test(navigator.userAgent);
 
   function addScore(delta) {
     app.score += delta;
@@ -134,7 +135,10 @@
       }
     });
 
-    let totalMarked = nextTargets.flat().filter(Boolean).length;
+    let totalMarked = 0;
+    nextTargets.forEach((row) => row.forEach((cell) => {
+      if (cell) totalMarked += 1;
+    }));
     const desiredTotal = profile.desiredTotal;
     const colorCycle = shuffleList(
       activeColors.slice().sort((a, b) => remainingNeed(b) - remainingNeed(a))
@@ -1047,5 +1051,6 @@
   document.addEventListener("click", primeAudio, { once: true });
 
   updateSoundButton();
+  refs.appRoot.classList.toggle("wechat-browser", isWechatBrowser);
   showStartMenu();
 })();

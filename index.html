@@ -1395,14 +1395,14 @@
         }
       }
 
-      @media (max-width: 420px) {
+      @media (max-width: 560px), (max-height: 820px) {
         body {
           padding: 0;
         }
         .phone {
           width: 100%;
           min-height: 100dvh;
-          height: auto;
+          height: 100dvh;
           max-height: none;
           border-radius: 0;
           border-left: 0;
@@ -1411,52 +1411,77 @@
         }
         .screen {
           min-height: 100dvh;
-          padding: calc(env(safe-area-inset-top, 0px) + 12px) 10px calc(env(safe-area-inset-bottom, 0px) + 28px);
-          gap: 10px;
+          padding: calc(env(safe-area-inset-top, 0px) + 10px) 10px calc(env(safe-area-inset-bottom, 0px) + 18px);
+          gap: 8px;
           overflow-y: auto;
         }
         .topbar {
-          padding: 10px;
+          padding: 8px 9px;
+          gap: 6px;
+        }
+        .badge {
+          font-size: 11px;
+          padding: 5px 8px;
         }
         .topbar-right {
           width: 100%;
           justify-content: flex-start;
+          gap: 6px;
+        }
+        .timer {
+          font-size: 16px;
+        }
+        .control-bar {
+          width: 100%;
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 6px;
+        }
+        .control-btn,
+        .sound-btn,
+        .share-btn {
+          min-height: 42px;
+          padding: 0 8px;
         }
         .target-row {
-          grid-template-columns: 78px 1fr;
+          grid-template-columns: 72px 1fr;
+          gap: 8px;
+        }
+        .target-mini {
+          padding: 8px;
         }
         .craft-preview {
-          grid-template-columns: 68px 1fr;
+          grid-template-columns: 64px 1fr;
           padding: 8px;
         }
         .mini-grid {
-          width: 58px;
-          height: 58px;
+          width: 52px;
+          height: 52px;
         }
         .progress-board {
           grid-template-columns: repeat(5, minmax(0, 1fr));
-          gap: 6px;
-          padding: 8px;
+          gap: 5px;
+          padding: 7px 6px;
         }
         .progress-item {
-          padding: 6px 4px;
+          padding: 6px 3px;
         }
         .board-wrap {
           flex: 0 1 auto;
-          padding: 6px;
+          padding: 5px;
         }
         .board,
         .craft-grid {
-          width: min(100%, calc(100dvh - 420px));
+          width: min(100%, calc(100vw - 24px), calc(100dvh - 300px));
           min-width: 0;
-          gap: 2px;
+          gap: 3px;
         }
         .craft-grid[data-grid-size="10"] {
-          width: min(100%, calc(100dvh - 436px));
+          width: min(100%, calc(100vw - 26px), calc(100dvh - 318px));
           gap: 2px;
         }
         .craft-grid[data-grid-size="12"] {
-          width: min(100%, calc(100dvh - 452px));
+          width: min(100%, calc(100vw - 28px), calc(100dvh - 334px));
           gap: 1px;
           padding: 4px;
         }
@@ -1465,11 +1490,11 @@
           border-width: 1px;
         }
         .bean {
-          width: 86%;
+          width: 90%;
           border-width: 1px;
         }
         .progress-item strong {
-          font-size: 13px;
+          font-size: 12px;
         }
         .progress-item small,
         .run-stats,
@@ -1480,8 +1505,16 @@
         .menu-btn {
           font-size: 11px;
         }
+        .craft-preview-copy strong {
+          font-size: 12px;
+        }
+        .craft-preview-copy span,
+        .craft-preview-copy em {
+          font-size: 10px;
+        }
         .resource-panel {
-          gap: 6px;
+          gap: 5px;
+          padding: 8px;
         }
         .collect-footer {
           padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
@@ -1506,6 +1539,13 @@
           grid-template-columns: 68px 1fr;
           padding: 8px;
         }
+      }
+
+      .phone.wechat-browser .overlay-card,
+      .phone.wechat-browser .result-card,
+      .phone.wechat-browser .celebration-card {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
       }
 
       @media (prefers-reduced-motion: reduce) {
