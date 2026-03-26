@@ -88,61 +88,61 @@
     audio.bgmMode = mode;
     const themes = {
       collect: {
-        tempo: app.hardLevel ? 430 : 470,
+        tempo: app.hardLevel ? 620 : 700,
         stepLength: 16,
         progression: [
           {
             root: 196.0,
-            bass: [196.0, null, null, 246.94, null, null, 220.0, null, 196.0, null, null, 246.94, null, null, 220.0, null],
+            bass: [196.0, null, null, null, null, null, 220.0, null, null, null, null, null, 196.0, null, null, null],
             chord: [293.66, 392.0, 493.88],
-            melody: [587.33, null, null, 659.25, null, null, 587.33, null, 523.25, null, null, 659.25, null, null, 587.33, null],
-            counter: [392.0, null, null, null, null, null, 392.0, null, null, null, null, 440.0, null, null, null, null],
+            melody: [587.33, null, null, null, null, null, 659.25, null, null, null, null, null, 587.33, null, null, null],
+            counter: [392.0, null, null, null, null, null, null, null, null, null, null, 440.0, null, null, null, null],
             drone: 146.83
           },
           {
             root: 174.61,
-            bass: [174.61, null, null, 220.0, null, null, 196.0, null, 174.61, null, null, 220.0, null, null, 196.0, null],
+            bass: [174.61, null, null, null, null, null, 196.0, null, null, null, null, null, 174.61, null, null, null],
             chord: [261.63, 349.23, 440.0],
-            melody: [523.25, null, null, 587.33, null, null, 523.25, null, 493.88, null, null, 587.33, null, null, 523.25, null],
-            counter: [349.23, null, null, null, null, null, 349.23, null, null, null, null, 392.0, null, null, null, null],
+            melody: [523.25, null, null, null, null, null, 587.33, null, null, null, null, null, 523.25, null, null, null],
+            counter: [349.23, null, null, null, null, null, null, null, null, null, null, 392.0, null, null, null, null],
             drone: 130.81
           },
           {
             root: 220.0,
-            bass: [220.0, null, null, 277.18, null, null, 246.94, null, 220.0, null, null, 277.18, null, null, 246.94, null],
+            bass: [220.0, null, null, null, null, null, 246.94, null, null, null, null, null, 220.0, null, null, null],
             chord: [329.63, 440.0, 523.25],
-            melody: [659.25, null, null, 698.46, null, null, 659.25, null, 587.33, null, null, 698.46, null, null, 659.25, null],
-            counter: [440.0, null, null, null, null, null, 440.0, null, null, null, null, 493.88, null, null, null, null],
+            melody: [659.25, null, null, null, null, null, 698.46, null, null, null, null, null, 659.25, null, null, null],
+            counter: [440.0, null, null, null, null, null, null, null, null, null, null, 493.88, null, null, null, null],
             drone: 164.81
           }
         ]
       },
       craft: {
-        tempo: app.hardLevel ? 560 : 610,
+        tempo: app.hardLevel ? 840 : 920,
         stepLength: 16,
         progression: [
           {
             root: 196.0,
-            bass: [196.0, null, null, null, 246.94, null, null, null, 220.0, null, null, null, 196.0, null, null, null],
+            bass: [196.0, null, null, null, null, null, null, null, 220.0, null, null, null, null, null, null, null],
             chord: [293.66, 392.0, 493.88],
-            melody: [392.0, null, null, 440.0, null, null, 493.88, null, 440.0, null, null, 392.0, null, null, 349.23, null],
-            counter: [293.66, null, null, null, null, null, 349.23, null, null, null, null, null, null, null, 293.66, null],
+            melody: [392.0, null, null, null, null, null, null, null, 440.0, null, null, null, null, null, null, null],
+            counter: [293.66, null, null, null, null, null, null, null, null, null, null, null, null, null, 293.66, null],
             drone: 146.83
           },
           {
             root: 164.81,
-            bass: [164.81, null, null, null, 220.0, null, null, null, 196.0, null, null, null, 164.81, null, null, null],
+            bass: [164.81, null, null, null, null, null, null, null, 196.0, null, null, null, null, null, null, null],
             chord: [246.94, 329.63, 392.0],
-            melody: [329.63, null, null, 392.0, null, null, 440.0, null, 392.0, null, null, 329.63, null, null, 293.66, null],
-            counter: [246.94, null, null, null, null, null, 293.66, null, null, null, null, null, null, null, 246.94, null],
+            melody: [329.63, null, null, null, null, null, null, null, 392.0, null, null, null, null, null, null, null],
+            counter: [246.94, null, null, null, null, null, null, null, null, null, null, null, null, null, 246.94, null],
             drone: 123.47
           },
           {
             root: 174.61,
-            bass: [174.61, null, null, null, 220.0, null, null, null, 261.63, null, null, null, 220.0, null, null, null],
+            bass: [174.61, null, null, null, null, null, null, null, 220.0, null, null, null, null, null, null, null],
             chord: [261.63, 349.23, 440.0],
-            melody: [440.0, null, null, 493.88, null, null, 523.25, null, 493.88, null, null, 440.0, null, null, 392.0, null],
-            counter: [261.63, null, null, null, null, null, 329.63, null, null, null, null, null, null, null, 261.63, null],
+            melody: [440.0, null, null, null, null, null, null, null, 493.88, null, null, null, null, null, null, null],
+            counter: [261.63, null, null, null, null, null, null, null, null, null, null, null, null, null, 261.63, null],
             drone: 130.81
           }
         ]
@@ -162,23 +162,25 @@
     const counter = phrase.counter?.[beat] || null;
     const enterPhrase = beat === 0 && audio.lastPhrase !== phraseIndex;
     audio.lastPhrase = phraseIndex;
-    const leadGain = app.phase === "craft" ? 0.0076 : 0.0102;
-    const chordGain = app.phase === "craft" ? 0.007 : 0.009;
+    const leadGain = app.phase === "craft" ? 0.0052 : 0.0074;
+    const chordGain = app.phase === "craft" ? 0.0048 : 0.0062;
 
-    playTone(phrase.drone, theme.tempo / 1000 * 5.2, "sine", app.phase === "craft" ? 0.0036 : 0.0046, 0, 0.18);
-    playTone(phrase.root / 2, theme.tempo / 1000 * 2.8, "sine", app.phase === "craft" ? 0.0054 : 0.0068, 0, 0.1);
-    playTone(chordTone, theme.tempo / 1000 * 2.3, "sine", chordGain, 0.04, 0.08);
+    playTone(phrase.drone, theme.tempo / 1000 * 7.4, "sine", app.phase === "craft" ? 0.0026 : 0.0034, 0, 0.28);
+    playTone(phrase.root / 2, theme.tempo / 1000 * 4.2, "sine", app.phase === "craft" ? 0.0042 : 0.0054, 0, 0.18);
+    if (beat === 0 || beat === 8) {
+      playTone(chordTone, theme.tempo / 1000 * 3.6, "sine", chordGain, 0.06, 0.14);
+    }
     if (bass) {
-      playTone(bass, theme.tempo / 1000 * 1.2, "triangle", app.phase === "craft" ? 0.009 : 0.011, 0.06, 0.05);
+      playTone(bass, theme.tempo / 1000 * 2.1, "sine", app.phase === "craft" ? 0.0052 : 0.0068, 0.08, 0.12);
     }
     if (counter) {
-      playTone(counter, theme.tempo / 1000 * 1.1, "sine", app.phase === "craft" ? 0.0048 : 0.0058, 0.28, 0.08);
+      playTone(counter, theme.tempo / 1000 * 1.9, "sine", app.phase === "craft" ? 0.0036 : 0.0044, 0.36, 0.14);
     }
     if (lead) {
-      playTone(lead, theme.tempo / 1000 * (app.phase === "craft" ? 1.7 : 1.25), "sine", leadGain, 0.18, 0.12);
+      playTone(lead, theme.tempo / 1000 * (app.phase === "craft" ? 2.4 : 1.9), "sine", leadGain, 0.22, 0.18);
     }
     if (enterPhrase) {
-      playTone(phrase.chord[0] * 2, theme.tempo / 1000 * 0.9, "sine", 0.0048, 0.1, 0.12);
+      playTone(phrase.chord[0] * 2, theme.tempo / 1000 * 1.6, "sine", 0.0034, 0.16, 0.18);
     }
   }
 
