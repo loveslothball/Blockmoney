@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>拼豆猫</title>
+    <style>
+      :root {
+        --phone-w: min(430px, 100vw);
+        --phone-h: min(932px, 100vh);
+        --bg-1: #f5e6c8;
+        --bg-2: #e7d1a4;
+        --ink: #1e1b26;
+        --ink-soft: #5e5b67;
+        --line: #312d3c;
+        --panel: #fff4d9;
+        --gold: #d09c33;
+        --danger: #d84b52;
+        --ok: #1fae75;
+        --blue: #4a7de6;
+        --red: #e25c5c;
+        --green: #4fb983;
+        --yellow: #f0c54f;
+        --purple: #7a62d9;
+        --pixel-shadow: 4px 4px 0 #312d3c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        background:
+          linear-gradient(45deg, rgba(255, 255, 255, 0.22) 25%, transparent 25%),
+          linear-gradient(-45deg, rgba(255, 255, 255, 0.22) 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.22) 75%),
+          linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.22) 75%),
+          linear-gradient(180deg, var(--bg-1), var(--bg-2));
+        background-size: 20px 20px, 20px 20px, 20px 20px, 20px 20px, 100% 100%;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0, 0 0;
+        font-family: "Press Start 2P", "Pixelify Sans", "ZCOOL QingKe HuangYou", "PingFang SC", monospace;
+        color: var(--ink);
+        overflow-x: hidden;
+      }
+
+      button {
+        touch-action: manipulation;
+      }
+
+      button:focus-visible {
+        outline: 3px solid #2b6dde;
+        outline-offset: 2px;
+      }
+
+      .phone {
+        width: var(--phone-w);
+        height: var(--phone-h);
+        max-height: 100vh;
+        border-radius: 16px;
+        border: 3px solid var(--line);
+        box-shadow: 8px 8px 0 #312d3c;
+        background: #f9e9c5;
+        overflow: hidden;
+        position: relative;
+      }
+      .phone.hard-mode {
+        border-color: #b3252a;
+        box-shadow: 8px 8px 0 #7e1b20, 0 0 0 3px rgba(216, 75, 82, 0.35) inset;
+        animation: alarmGlow 0.85s steps(2, end) infinite;
+      }
+
+      .screen {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: calc(env(safe-area-inset-top, 0px) + 16px) 14px calc(env(safe-area-inset-bottom, 0px) + 14px);
+        gap: 12px;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #fff8e7;
+        border: 2px solid var(--line);
+        box-shadow: var(--pixel-shadow);
+      }
+      .phone.hard-mode .topbar {
+        background: #ffe3e1;
+        border-color: #9a2f33;
+      }
+      .phone.hard-mode .timer {
+        color: #8e2025;
+      }
+
+      .badge {
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0;
+        color: #563f1a;
+        background: #ffd980;
+        border: 2px solid #90652a;
+      }
+      .phone.hard-mode .badge {
+        background: #ffb1b6;
+        color: #6f181d;
+        border-color: #8e2025;
+      }
+
+      .timer {
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+        font-size: 18px;
+      }
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .run-stats {
+        font-size: 10px;
+        color: var(--ink-soft);
+      }
+      .hard-badge {
+        font-size: 10px;
+        color: #fff;
+        background: #c0262d;
+        border: 2px solid #6c1115;
+        border-radius: 6px;
+        padding: 4px 6px;
+        animation: hardBlink 0.7s steps(2, end) infinite;
+      }
+      .hard-badge.hidden {
+        display: none;
+      }
+
+      .sound-btn {
+        min-width: 44px;
+        min-height: 44px;
+        border: 2px solid var(--line);
+        border-radius: 6px;
+        background: #fffdf4;
+        color: var(--ink);
+        font-size: 10px;
+        padding: 0 8px;
+        cursor: pointer;
+      }
+      .share-btn {
+        min-width: 44px;
+        min-height: 44px;
+        border: 2px solid var(--line);
+        border-radius: 6px;
+        background: #e7f3ff;
+        color: #1f3f77;
+        font-size: 10px;
+        padding: 0 8px;
+        cursor: pointer;
+      }
+
+      .timer.warn {
+        color: var(--danger);
+        animation: pulse 0.7s infinite;
+      }
+
+      .phase-wrap {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 0;
+      }
+
+      .target-row {
+        display: grid;
+        grid-template-columns: 96px 1fr;
+        gap: 10px;
+      }
+
+      .panel {
+        border-radius: 8px;
+        border: 2px solid var(--line);
+        background: var(--panel);
+        box-shadow: var(--pixel-shadow);
+      }
+
+      .target-mini {
+        padding: 10px;
+        display: grid;
+        place-items: center;
+      }
+
+      .mini-grid {
+        width: 70px;
+        height: 70px;
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 2px;
+        background: #8f8a9e;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .mini-cell {
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .mini-cell.fill {
+        border-radius: 2px;
+      }
+
+      .progress-board {
+        padding: 10px 12px;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .progress-item {
+        background: #fffdf4;
+        border: 2px solid var(--line);
+        border-radius: 6px;
+        padding: 8px 6px;
+        text-align: center;
+      }
+
+      .progress-item .dot {
+        width: 18px;
+        height: 18px;
+        margin: 0 auto 4px;
+        border-radius: 50%;
+        border: 2px solid rgba(0, 0, 0, 0.15);
+      }
+
+      .progress-item strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .progress-item small {
+        color: var(--ink-soft);
+        font-size: 11px;
+      }
+
+      .board-wrap {
+        flex: 1;
+        min-height: 0;
+        padding: 10px;
+        display: grid;
+        place-items: center;
+      }
+
+      .board,
+      .craft-grid {
+        width: min(100%, 390px);
+        aspect-ratio: 1;
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 4px;
+      }
+
+      .cell,
+      .craft-cell {
+        border-radius: 2px;
+        border: 2px solid rgba(68, 72, 80, 0.32);
+        position: relative;
+        cursor: pointer;
+        aspect-ratio: 1;
+        min-width: 0;
+        min-height: 0;
+        padding: 0;
+      }
+
+      .cell {
+        background: #fff9eb;
+        display: grid;
+        place-items: center;
+      }
+
+      .cell.selected {
+        outline: 3px solid #ff8f42;
+        transform: scale(1.03);
+      }
+
+      .bean {
+        width: 82%;
+        height: auto;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        border: 2px solid rgba(30, 27, 38, 0.35);
+        box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.15), inset 2px 2px 0 rgba(255, 255, 255, 0.25);
+      }
+
+      .collect-footer {
+        padding: 10px 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .steps {
+        font-variant-numeric: tabular-nums;
+        font-size: 17px;
+        font-weight: 700;
+      }
+
+      .craft-grid {
+        background: #e7eaf1;
+        border-radius: 4px;
+        padding: 8px;
+      }
+
+      .craft-cell {
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .craft-cell.target {
+        border-style: solid;
+        border-color: rgba(66, 72, 88, 0.5);
+      }
+
+      .craft-cell.wrong {
+        animation: shake 0.25s linear;
+        background: rgba(216, 75, 82, 0.24);
+      }
+
+      .outline-dot {
+        width: 42%;
+        height: auto;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: var(--hint-color, rgba(125, 134, 149, 0.3));
+        border: 1px dashed rgba(40, 44, 54, 0.25);
+      }
+
+      .resource-panel {
+        padding: 10px;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .resource-btn {
+        border: 2px solid var(--line);
+        background: #fffdf4;
+        border-radius: 6px;
+        padding: 8px 4px;
+        text-align: center;
+        cursor: pointer;
+        min-height: 52px;
+      }
+
+      .resource-btn.active {
+        border-color: #ff8f42;
+        box-shadow: 0 0 0 2px rgba(255, 143, 66, 0.2);
+      }
+
+      .resource-btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .resource-btn .dot {
+        width: 20px;
+        height: 20px;
+        margin: 0 auto 4px;
+        border-radius: 50%;
+        border: 2px solid rgba(0, 0, 0, 0.15);
+      }
+
+      .toast {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 112px;
+        background: rgba(25, 29, 33, 0.88);
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 6px;
+        border: 2px solid #fff;
+        font-size: 10px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.22s;
+      }
+
+      .toast.show {
+        opacity: 1;
+      }
+
+      .overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(9, 14, 21, 0.88), rgba(22, 28, 40, 0.9));
+        color: #f7f9ff;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        z-index: 12;
+      }
+      .menu-overlay {
+        z-index: 16;
+      }
+
+      .overlay.hidden {
+        display: none;
+      }
+
+      .overlay-card {
+        width: min(86%, 360px);
+        background: rgba(255, 255, 255, 0.12);
+        border: 2px solid rgba(255, 255, 255, 0.24);
+        border-radius: 8px;
+        padding: 18px;
+      }
+
+      .overlay h2 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+
+      .overlay p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.86);
+      }
+
+      .overlay .need-list {
+        margin-top: 12px;
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .menu-actions {
+        margin-top: 14px;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+      }
+      .menu-btn {
+        border: 2px solid #fff;
+        border-radius: 6px;
+        min-height: 44px;
+        min-width: 88px;
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+        font-size: 10px;
+        cursor: pointer;
+        padding: 0 10px;
+      }
+
+      .need {
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .result {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: rgba(14, 19, 28, 0.7);
+        z-index: 14;
+      }
+
+      .result.hidden {
+        display: none;
+      }
+
+      .result-card {
+        width: min(86%, 360px);
+        border-radius: 8px;
+        border: 2px solid var(--line);
+        background: #fff7e2;
+        padding: 18px;
+        text-align: center;
+      }
+
+      .result-card h3 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+
+      .result-card p {
+        margin: 0 0 14px;
+        color: var(--ink-soft);
+      }
+
+      .result-card button {
+        border: 2px solid #1f3f77;
+        border-radius: 6px;
+        padding: 10px 18px;
+        cursor: pointer;
+        color: #fff;
+        background: #2b6dde;
+        min-height: 44px;
+      }
+      .leaderboard {
+        margin: 10px 0 14px;
+        padding: 8px;
+        border: 2px solid var(--line);
+        border-radius: 6px;
+        background: #fffdf4;
+        text-align: left;
+      }
+      .leaderboard h4 {
+        margin: 0 0 6px;
+        font-size: 11px;
+      }
+      .leaderboard ol {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 4px;
+        font-size: 10px;
+      }
+      .leaderboard li {
+        color: var(--ink-soft);
+      }
+      .leaderboard li.current {
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      .iron-sweep {
+        pointer-events: none;
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(120deg, transparent 25%, rgba(255, 255, 255, 0.62) 48%, rgba(176, 199, 255, 0.66) 56%, transparent 76%);
+        transform: translateX(-130%);
+        opacity: 0;
+        z-index: 13;
+      }
+
+      .iron-sweep.play {
+        animation: iron 900ms ease-out;
+      }
+
+      .phase-hidden {
+        display: none !important;
+      }
+
+      @keyframes iron {
+        0% {
+          opacity: 0;
+          transform: translateX(-130%);
+        }
+        10% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 1;
+          transform: translateX(130%);
+        }
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.06);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      @keyframes hardBlink {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+      @keyframes alarmGlow {
+        0% {
+          box-shadow: 8px 8px 0 #7e1b20, 0 0 0 2px rgba(216, 75, 82, 0.25) inset;
+        }
+        100% {
+          box-shadow: 8px 8px 0 #7e1b20, 0 0 0 5px rgba(216, 75, 82, 0.45) inset;
+        }
+      }
+
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-4px);
+        }
+        75% {
+          transform: translateX(4px);
+        }
+      }
+
+      @media (max-width: 420px) {
+        .progress-item strong {
+          font-size: 14px;
+        }
+        .resource-panel {
+          gap: 6px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="phone" id="app">
+      <div class="screen">
+        <div class="topbar panel">
+          <span class="badge" id="phaseLabel">阶段一 · 收集豆子</span>
+          <div class="topbar-right">
+            <span class="run-stats" id="runStats">Lv.1 · 0分</span>
+            <span class="hard-badge hidden" id="hardBadge">警报</span>
+            <span class="timer" id="timerText">步数 24</span>
+            <button id="soundBtn" class="sound-btn" type="button" aria-label="切换音效">音效开</button>
+            <button id="shareBtn" class="share-btn" type="button" aria-label="分享游戏">分享</button>
+          </div>
+        </div>
+
+        <div class="phase-wrap" id="collectPhase">
+          <div class="target-row">
+            <div class="target-mini panel">
+              <div class="mini-grid" id="miniTarget"></div>
+            </div>
+            <div class="progress-board panel" id="progressBoard"></div>
+          </div>
+
+          <div class="board-wrap panel">
+            <div class="board" id="board"></div>
+          </div>
+
+          <div class="collect-footer panel">
+            <span>剩余步数</span>
+            <span class="steps" id="stepText">24</span>
+          </div>
+        </div>
+
+        <div class="phase-wrap phase-hidden" id="craftPhase">
+          <div class="board-wrap panel">
+            <div class="craft-grid" id="craftGrid"></div>
+          </div>
+          <div class="resource-panel panel" id="resourcePanel"></div>
+        </div>
+      </div>
+
+      <div class="overlay" id="introOverlay">
+        <div class="overlay-card">
+          <h2 id="introTitle">目标图案</h2>
+          <p id="introDesc">先收集，再拼搭。3 秒后开始收集阶段</p>
+          <div class="mini-grid" id="overlayMini" style="margin: 12px auto 0"></div>
+          <div class="need-list" id="needList"></div>
+        </div>
+      </div>
+
+      <div class="overlay menu-overlay" id="startLayer">
+        <div class="overlay-card">
+          <h2>拼豆猫</h2>
+          <p>随机小动物拼豆闯关，挑战你的最高分。</p>
+          <div class="menu-actions">
+            <button id="startGameBtn" class="menu-btn" type="button">开始游戏</button>
+            <button id="shareGameBtn" class="menu-btn" type="button">分享游戏</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="iron-sweep" id="ironSweep"></div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+      <div class="result hidden" id="resultLayer">
+        <div class="result-card">
+          <h3 id="resultTitle"></h3>
+          <p id="resultText"></p>
+          <div class="leaderboard">
+            <h4>排行榜</h4>
+            <ol id="leaderboardList"></ol>
+          </div>
+          <button id="restartBtn">再来一局</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const COLORS = {
+        red: { name: "红", hex: "var(--red)", soft: "rgba(226,92,92,0.26)" },
+        blue: { name: "蓝", hex: "var(--blue)", soft: "rgba(74,125,230,0.24)" },
+        green: { name: "绿", hex: "var(--green)", soft: "rgba(79,185,131,0.24)" },
+        yellow: { name: "黄", hex: "var(--yellow)", soft: "rgba(240,197,79,0.24)" },
+        purple: { name: "紫", hex: "var(--purple)", soft: "rgba(122,98,217,0.24)" }
+      };
+      const COLOR_KEYS = Object.keys(COLORS);
+      const SIZE = 8;
+      const START_STEPS = 24;
+      const NORMAL_CRAFT_TIME = 35;
+      const HARD_CRAFT_TIME = 60;
+      const LEADERBOARD_KEY = "bean_game_leaderboard_v1";
+      const ANIMAL_MASKS = [
+        {
+          name: "猫咪",
+          mask: [
+            [1, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 0, 0, 0, 0, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1, 1, 0, 0],
+            [0, 1, 1, 0, 0, 1, 1, 0],
+            [1, 0, 0, 1, 1, 0, 0, 1]
+          ]
+        },
+        {
+          name: "兔兔",
+          mask: [
+            [0, 1, 0, 0, 0, 0, 1, 0],
+            [0, 1, 0, 0, 0, 0, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1, 1, 0, 0],
+            [0, 1, 0, 1, 1, 0, 1, 0]
+          ]
+        },
+        {
+          name: "小鱼",
+          mask: [
+            [0, 0, 0, 1, 1, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 0, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [0, 0, 1, 1, 1, 1, 0, 0],
+            [0, 0, 0, 1, 1, 0, 0, 0]
+          ]
+        },
+        {
+          name: "小龟",
+          mask: [
+            [0, 0, 1, 1, 1, 1, 0, 0],
+            [0, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 1, 1, 0],
+            [0, 0, 1, 1, 1, 1, 0, 0],
+            [0, 1, 0, 1, 1, 0, 1, 0]
+          ]
+        },
+        {
+          name: "小鸟",
+          mask: [
+            [0, 0, 0, 1, 1, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 0, 0],
+            [0, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 0, 0],
+            [1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1],
+            [0, 0, 1, 1, 1, 1, 0, 0],
+            [0, 0, 0, 1, 1, 0, 0, 0]
+          ]
+        }
+      ];
+
+      const app = {
+        phase: "collect",
+        level: 1,
+        clearedLevels: 0,
+        score: 0,
+        currentAnimal: "",
+        lastAnimal: "",
+        animalQueue: [],
+        hardLevel: false,
+        steps: START_STEPS,
+        targetMap: [],
+        board: [],
+        selected: null,
+        needed: {},
+        collected: {},
+        resources: {},
+        placed: Array.from({ length: SIZE }, () => Array(SIZE).fill(null)),
+        activeColor: null,
+        craftTime: NORMAL_CRAFT_TIME,
+        craftTimer: null,
+        locked: false
+      };
+
+      const refs = {
+        board: document.getElementById("board"),
+        craftGrid: document.getElementById("craftGrid"),
+        miniTarget: document.getElementById("miniTarget"),
+        overlayMini: document.getElementById("overlayMini"),
+        progressBoard: document.getElementById("progressBoard"),
+        resourcePanel: document.getElementById("resourcePanel"),
+        needList: document.getElementById("needList"),
+        phaseLabel: document.getElementById("phaseLabel"),
+        timerText: document.getElementById("timerText"),
+        stepText: document.getElementById("stepText"),
+        collectPhase: document.getElementById("collectPhase"),
+        craftPhase: document.getElementById("craftPhase"),
+        introOverlay: document.getElementById("introOverlay"),
+        toast: document.getElementById("toast"),
+        resultLayer: document.getElementById("resultLayer"),
+        resultTitle: document.getElementById("resultTitle"),
+        resultText: document.getElementById("resultText"),
+        introTitle: document.getElementById("introTitle"),
+        introDesc: document.getElementById("introDesc"),
+        startLayer: document.getElementById("startLayer"),
+        startGameBtn: document.getElementById("startGameBtn"),
+        shareGameBtn: document.getElementById("shareGameBtn"),
+        leaderboardList: document.getElementById("leaderboardList"),
+        restartBtn: document.getElementById("restartBtn"),
+        ironSweep: document.getElementById("ironSweep"),
+        soundBtn: document.getElementById("soundBtn"),
+        shareBtn: document.getElementById("shareBtn"),
+        hardBadge: document.getElementById("hardBadge"),
+        appRoot: document.getElementById("app"),
+        runStats: document.getElementById("runStats")
+      };
+
+      const audio = {
+        ctx: null,
+        enabled: true,
+        bgmTimer: null
+      };
+
+      function ensureAudio() {
+        if (audio.ctx) return;
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        audio.ctx = new Ctx();
+        startBgm();
+      }
+
+      function playTone(freq, duration = 0.12, type = "square", volume = 0.05, when = 0) {
+        if (!audio.enabled || !audio.ctx) return;
+        const t0 = audio.ctx.currentTime + when;
+        const osc = audio.ctx.createOscillator();
+        const gain = audio.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t0);
+        gain.gain.setValueAtTime(0, t0);
+        gain.gain.linearRampToValueAtTime(volume, t0 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+        osc.connect(gain).connect(audio.ctx.destination);
+        osc.start(t0);
+        osc.stop(t0 + duration + 0.01);
+      }
+
+      function sfxMatch(count) {
+        const n = Math.min(4, Math.max(1, Math.floor(count / 3)));
+        const base = 420;
+        for (let i = 0; i < n; i += 1) playTone(base + i * 90, 0.09, "square", 0.045, i * 0.045);
+      }
+
+      function sfxPlace() {
+        playTone(680, 0.06, "square", 0.04);
+        playTone(920, 0.08, "triangle", 0.03, 0.04);
+      }
+
+      function sfxFail() {
+        playTone(280, 0.16, "sawtooth", 0.06);
+        playTone(220, 0.24, "square", 0.05, 0.05);
+      }
+
+      function sfxSuccess() {
+        const notes = [523, 659, 784, 1046];
+        notes.forEach((n, i) => playTone(n, 0.12, "triangle", 0.05, i * 0.07));
+      }
+      function sfxHardAlert() {
+        playTone(760, 0.09, "square", 0.05);
+        playTone(620, 0.09, "square", 0.05, 0.12);
+        playTone(760, 0.09, "square", 0.05, 0.24);
+      }
+
+      function stopBgm() {
+        if (audio.bgmTimer) {
+          clearInterval(audio.bgmTimer);
+          audio.bgmTimer = null;
+        }
+      }
+
+      function playBgmStep(step) {
+        const normalBass = [165, 165, 196, 165, 147, 147, 196, 220];
+        const normalLead = [659, 784, 659, 587, 659, 523, 587, 494];
+        const hardBass = [147, 147, 139, 131, 147, 139, 131, 123];
+        const hardLead = [784, 740, 698, 659, 740, 698, 659, 622];
+        const bass = app.hardLevel ? hardBass : normalBass;
+        const lead = app.hardLevel ? hardLead : normalLead;
+        const b = bass[step % bass.length];
+        const l = lead[step % lead.length];
+        const beat = app.hardLevel ? 0.12 : 0.16;
+        const leadDur = app.hardLevel ? 0.08 : 0.1;
+        const leadType = app.hardLevel ? "sawtooth" : "triangle";
+        playTone(b, beat, "square", app.hardLevel ? 0.038 : 0.03);
+        playTone(l, leadDur, leadType, app.hardLevel ? 0.03 : 0.02, app.hardLevel ? 0.02 : 0.035);
+      }
+
+      function startBgm() {
+        if (!audio.ctx || !audio.enabled || audio.bgmTimer) return;
+        let step = 0;
+        playBgmStep(step++);
+        const tempo = app.hardLevel ? 260 : 380;
+        audio.bgmTimer = setInterval(() => {
+          if (!audio.enabled) return;
+          if (audio.ctx.state === "suspended") audio.ctx.resume();
+          playBgmStep(step++);
+        }, tempo);
+      }
+
+      function refreshBgm() {
+        if (!audio.ctx || !audio.enabled) return;
+        stopBgm();
+        startBgm();
+      }
+
+      function updateSoundButton() {
+        refs.soundBtn.textContent = audio.enabled ? "音效开" : "音效关";
+      }
+
+      function shuffle(arr) {
+        const n = [...arr];
+        for (let i = n.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [n[i], n[j]] = [n[j], n[i]];
+        }
+        return n;
+      }
+
+      function isHardLevel(level) {
+        return level % 5 === 0;
+      }
+
+      function pickAnimal() {
+        if (!app.animalQueue.length) {
+          app.animalQueue = shuffle(ANIMAL_MASKS);
+          if (app.animalQueue[0] && app.animalQueue[0].name === app.lastAnimal) {
+            app.animalQueue.push(app.animalQueue.shift());
+          }
+        }
+        const chosen = app.animalQueue.shift() || ANIMAL_MASKS[0];
+        app.lastAnimal = chosen.name;
+        return chosen;
+      }
+
+      function generateTargetMap(level) {
+        const animal = pickAnimal();
+        const mask = animal.mask;
+        const activeCount = Math.min(5, 3 + Math.floor((level - 1) / 2));
+        const palette = shuffle(COLOR_KEYS).slice(0, activeCount);
+        const map = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+        let idx = 0;
+        for (let r = 0; r < SIZE; r += 1) {
+          for (let c = 0; c < SIZE; c += 1) {
+            if (!mask[r][c]) continue;
+            map[r][c] = palette[(idx + r + c + level) % palette.length];
+            idx += 1;
+          }
+        }
+        return { map, animalName: animal.name };
+      }
+
+      function initNeeded() {
+        const needed = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
+        app.targetMap.flat().forEach((c) => {
+          if (c) needed[c] += 1;
+        });
+        return needed;
+      }
+
+      function levelStepLimit(level) {
+        return START_STEPS + Math.min(8, Math.floor((level - 1) / 2));
+      }
+
+      function levelCraftTime(level) {
+        return isHardLevel(level) ? HARD_CRAFT_TIME : NORMAL_CRAFT_TIME;
+      }
+
+      function updateRunStats() {
+        const tag = app.hardLevel ? "超难" : "普通";
+        refs.runStats.textContent = `Lv.${app.level}(${tag}) · ${app.score}分`;
+      }
+
+      function applyDifficultyUI() {
+        refs.appRoot.classList.toggle("hard-mode", app.hardLevel);
+        refs.hardBadge.classList.toggle("hidden", !app.hardLevel);
+        refs.hardBadge.textContent = app.hardLevel ? "超难警报" : "警报";
+      }
+
+      function addScore(delta) {
+        app.score += delta;
+        updateRunStats();
+      }
+
+      function getLeaderboard() {
+        try {
+          const raw = localStorage.getItem(LEADERBOARD_KEY);
+          const list = raw ? JSON.parse(raw) : [];
+          return Array.isArray(list) ? list : [];
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveLeaderboard(list) {
+        localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(list.slice(0, 10)));
+      }
+
+      function renderLeaderboard(currentId = null) {
+        const list = getLeaderboard();
+        refs.leaderboardList.innerHTML = "";
+        if (!list.length) {
+          const li = document.createElement("li");
+          li.textContent = "暂无记录";
+          refs.leaderboardList.appendChild(li);
+          return;
+        }
+        list.slice(0, 8).forEach((it, i) => {
+          const li = document.createElement("li");
+          if (currentId && it.id === currentId) li.classList.add("current");
+          li.textContent = `#${i + 1} ${it.score}分 · 通关${it.levels}关`;
+          refs.leaderboardList.appendChild(li);
+        });
+      }
+
+      async function shareGame(extra = "") {
+        const base = extra || `我在拼豆猫闯到第${app.clearedLevels}关，拿到${app.score}分，快来挑战。`;
+        const text = `${base}`;
+        const url = window.location.href;
+        try {
+          if (navigator.share) {
+            await navigator.share({ title: "拼豆猫", text, url });
+            return;
+          }
+        } catch (e) {}
+        try {
+          await navigator.clipboard.writeText(`${text} ${url}`);
+          toast("分享文案已复制");
+        } catch (e) {
+          toast("当前环境不支持分享");
+        }
+      }
+
+      function randomColor() {
+        return COLOR_KEYS[Math.floor(Math.random() * COLOR_KEYS.length)];
+      }
+
+      function createBoard() {
+        let b = Array.from({ length: SIZE }, () => Array.from({ length: SIZE }, randomColor));
+        while (findMatches(b).length > 0 || !hasAnyMove(b)) {
+          b = Array.from({ length: SIZE }, () => Array.from({ length: SIZE }, randomColor));
+        }
+        return b;
+      }
+
+      function drawMini(gridEl) {
+        gridEl.innerHTML = "";
+        for (let r = 0; r < SIZE; r += 1) {
+          for (let c = 0; c < SIZE; c += 1) {
+            const cell = document.createElement("div");
+            cell.className = "mini-cell" + (app.targetMap[r][c] ? " fill" : "");
+            if (app.targetMap[r][c]) cell.style.background = COLORS[app.targetMap[r][c]].hex;
+            gridEl.appendChild(cell);
+          }
+        }
+      }
+
+      function drawProgress() {
+        refs.progressBoard.innerHTML = "";
+        COLOR_KEYS.forEach((k) => {
+          const remain = Math.max(app.needed[k] - app.collected[k], 0);
+          const el = document.createElement("div");
+          el.className = "progress-item";
+          el.dataset.color = k;
+          el.innerHTML = `<div class="dot" style="background:${COLORS[k].hex}"></div><strong>${remain}</strong><small>${COLORS[k].name}</small>`;
+          refs.progressBoard.appendChild(el);
+        });
+      }
+
+      function drawNeedList() {
+        refs.needList.innerHTML = "";
+        COLOR_KEYS.forEach((k) => {
+          const need = app.needed[k];
+          if (!need) return;
+          const tag = document.createElement("span");
+          tag.className = "need";
+          tag.textContent = `${COLORS[k].name} x ${need}`;
+          refs.needList.appendChild(tag);
+        });
+      }
+
+      function renderBoard() {
+        refs.board.innerHTML = "";
+        for (let r = 0; r < SIZE; r += 1) {
+          for (let c = 0; c < SIZE; c += 1) {
+            const cell = document.createElement("button");
+            cell.type = "button";
+            cell.className = "cell";
+            if (app.selected && app.selected.r === r && app.selected.c === c) cell.classList.add("selected");
+            cell.dataset.r = r;
+            cell.dataset.c = c;
+            cell.setAttribute("aria-label", `棋盘第${r + 1}行第${c + 1}列，豆子颜色${COLORS[app.board[r][c]].name}`);
+            cell.onclick = () => onCellTap(r, c, cell);
+            const bean = document.createElement("div");
+            bean.className = "bean";
+            bean.style.background = COLORS[app.board[r][c]].hex;
+            cell.appendChild(bean);
+            refs.board.appendChild(cell);
+          }
+        }
+      }
+
+      function onCellTap(r, c, element) {
+        if (app.phase !== "collect" || app.locked) return;
+        if (!app.selected) {
+          app.selected = { r, c };
+          renderBoard();
+          return;
+        }
+        if (app.selected.r === r && app.selected.c === c) {
+          app.selected = null;
+          renderBoard();
+          return;
+        }
+        const near = Math.abs(app.selected.r - r) + Math.abs(app.selected.c - c) === 1;
+        if (!near) {
+          app.selected = { r, c };
+          renderBoard();
+          return;
+        }
+        app.locked = true;
+        swap(app.board, app.selected, { r, c });
+        app.steps -= 1;
+        refs.stepText.textContent = app.steps;
+        refs.timerText.textContent = `步数 ${app.steps}`;
+        const matches = findMatches(app.board);
+        if (!matches.length) {
+          swap(app.board, app.selected, { r, c });
+          app.selected = null;
+          app.locked = false;
+          toast("没有形成消除");
+          renderBoard();
+          checkCollectFail();
+          return;
+        }
+        app.selected = null;
+        resolveBoard(matches);
+      }
+
+      function swap(board, a, b) {
+        const t = board[a.r][a.c];
+        board[a.r][a.c] = board[b.r][b.c];
+        board[b.r][b.c] = t;
+      }
+
+      function findMatches(board) {
+        const mark = new Set();
+
+        for (let r = 0; r < SIZE; r += 1) {
+          let run = 1;
+          for (let c = 1; c <= SIZE; c += 1) {
+            if (c < SIZE && board[r][c] === board[r][c - 1]) run += 1;
+            else {
+              if (run >= 3) for (let k = 0; k < run; k += 1) mark.add(`${r},${c - 1 - k}`);
+              run = 1;
+            }
+          }
+        }
+
+        for (let c = 0; c < SIZE; c += 1) {
+          let run = 1;
+          for (let r = 1; r <= SIZE; r += 1) {
+            if (r < SIZE && board[r][c] === board[r - 1][c]) run += 1;
+            else {
+              if (run >= 3) for (let k = 0; k < run; k += 1) mark.add(`${r - 1 - k},${c}`);
+              run = 1;
+            }
+          }
+        }
+
+        return Array.from(mark).map((s) => {
+          const [r, c] = s.split(",").map(Number);
+          return { r, c };
+        });
+      }
+
+      function hasAnyMove(board) {
+        for (let r = 0; r < SIZE; r += 1) {
+          for (let c = 0; c < SIZE; c += 1) {
+            if (c + 1 < SIZE) {
+              swap(board, { r, c }, { r, c: c + 1 });
+              const ok = findMatches(board).length > 0;
+              swap(board, { r, c }, { r, c: c + 1 });
+              if (ok) return true;
+            }
+            if (r + 1 < SIZE) {
+              swap(board, { r, c }, { r: r + 1, c });
+              const ok = findMatches(board).length > 0;
+              swap(board, { r, c }, { r: r + 1, c });
+              if (ok) return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function animateCollect(matchCells) {
+        const tasks = [];
+        matchCells.forEach(({ r, c }) => {
+          const color = app.board[r][c];
+          app.collected[color] += 1;
+          addScore(10);
+          const source = refs.board.querySelector(`[data-r="${r}"][data-c="${c}"] .bean`);
+          const target = refs.progressBoard.querySelector(`.progress-item[data-color="${color}"] .dot`);
+          if (!source || !target) return;
+          const s = source.getBoundingClientRect();
+          const t = target.getBoundingClientRect();
+          const fly = document.createElement("div");
+          fly.className = "bean";
+          fly.style.background = COLORS[color].hex;
+          fly.style.width = "20px";
+          fly.style.height = "20px";
+          fly.style.position = "fixed";
+          fly.style.left = s.left + s.width / 2 - 10 + "px";
+          fly.style.top = s.top + s.height / 2 - 10 + "px";
+          fly.style.zIndex = 50;
+          fly.style.transition = "transform 0.45s cubic-bezier(.2,.8,.2,1), opacity 0.45s";
+          document.body.appendChild(fly);
+          requestAnimationFrame(() => {
+            fly.style.transform = `translate(${t.left - s.left}px, ${t.top - s.top}px) scale(0.35)`;
+            fly.style.opacity = "0.2";
+          });
+          tasks.push(
+            new Promise((resolve) => {
+              setTimeout(() => {
+                fly.remove();
+                resolve();
+              }, 470);
+            })
+          );
+        });
+        return Promise.all(tasks);
+      }
+
+      async function resolveBoard(initialMatches) {
+        let matches = initialMatches;
+        while (matches.length) {
+          sfxMatch(matches.length);
+          renderBoard();
+          await animateCollect(matches);
+          matches.forEach(({ r, c }) => {
+            app.board[r][c] = null;
+          });
+          collapse();
+          drawProgress();
+          renderBoard();
+          matches = findMatches(app.board);
+        }
+        app.locked = false;
+
+        if (isCollectDone()) {
+          enterCraft();
+          return;
+        }
+        checkCollectFail();
+      }
+
+      function collapse() {
+        for (let c = 0; c < SIZE; c += 1) {
+          const stack = [];
+          for (let r = SIZE - 1; r >= 0; r -= 1) {
+            if (app.board[r][c]) stack.push(app.board[r][c]);
+          }
+          for (let r = SIZE - 1; r >= 0; r -= 1) {
+            app.board[r][c] = stack.shift() || randomColor();
+          }
+        }
+      }
+
+      function isCollectDone() {
+        return COLOR_KEYS.every((k) => app.collected[k] >= app.needed[k]);
+      }
+
+      function checkCollectFail() {
+        if (app.steps <= 0) {
+          endRun("步数已耗尽，收集失败");
+          return;
+        }
+        if (!hasAnyMove(app.board)) {
+          endRun("棋盘无可消除组合，本局结束");
+        }
+      }
+
+      function enterCraft() {
+        app.phase = "craft";
+        app.resources = { ...app.collected };
+        app.activeColor = COLOR_KEYS.find((k) => app.resources[k] > 0) || "red";
+        refs.collectPhase.classList.add("phase-hidden");
+        refs.craftPhase.classList.remove("phase-hidden");
+        refs.phaseLabel.textContent = `第${app.level}关${app.hardLevel ? " · 超难" : ""} · 拼搭图案`;
+        app.craftTime = levelCraftTime(app.level);
+        updateCraftTimer();
+        drawCraft();
+        drawResources();
+        toast(`进入拼搭阶段，${app.craftTime} 秒内完成`);
+        app.craftTimer = setInterval(() => {
+          app.craftTime -= 1;
+          updateCraftTimer();
+          if (app.craftTime <= 0) {
+            clearInterval(app.craftTimer);
+            endRun("时间到，拼搭失败");
+          }
+        }, 1000);
+      }
+
+      function updateCraftTimer() {
+        refs.timerText.textContent = `倒计时 ${app.craftTime}s`;
+        refs.timerText.classList.toggle("warn", app.craftTime <= 8);
+      }
+
+      function drawCraft() {
+        refs.craftGrid.innerHTML = "";
+        for (let r = 0; r < SIZE; r += 1) {
+          for (let c = 0; c < SIZE; c += 1) {
+            const target = app.targetMap[r][c];
+            const placed = app.placed[r][c];
+            const cell = document.createElement("button");
+            cell.type = "button";
+            cell.className = "craft-cell" + (target ? " target" : "");
+            cell.dataset.r = r;
+            cell.dataset.c = c;
+            cell.onclick = () => onCraftCell(r, c, cell);
+            const label = target ? `目标格${r + 1}-${c + 1}，需要${COLORS[target].name}` : `空白格${r + 1}-${c + 1}`;
+            cell.setAttribute("aria-label", label);
+            if (target) cell.style.background = COLORS[target].soft;
+
+            if (placed) {
+              const bean = document.createElement("div");
+              bean.className = "bean";
+              bean.style.background = COLORS[placed].hex;
+              cell.appendChild(bean);
+            } else if (target) {
+              const dot = document.createElement("div");
+              dot.className = "outline-dot";
+              dot.style.setProperty("--hint-color", COLORS[target].soft);
+              cell.appendChild(dot);
+            }
+            refs.craftGrid.appendChild(cell);
+          }
+        }
+      }
+
+      function drawResources() {
+        refs.resourcePanel.innerHTML = "";
+        COLOR_KEYS.forEach((k) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "resource-btn" + (app.activeColor === k ? " active" : "");
+          btn.disabled = app.resources[k] <= 0;
+          btn.onclick = () => {
+            app.activeColor = k;
+            drawResources();
+          };
+          btn.setAttribute("aria-label", `${COLORS[k].name}色豆子，剩余${app.resources[k]}个`);
+          btn.innerHTML = `<div class="dot" style="background:${COLORS[k].hex}"></div><strong>${app.resources[k]}</strong><div style="font-size:11px;color:var(--ink-soft)">${COLORS[k].name}</div>`;
+          refs.resourcePanel.appendChild(btn);
+        });
+      }
+
+      function onCraftCell(r, c, cellEl) {
+        if (app.phase !== "craft") return;
+        const target = app.targetMap[r][c];
+        const placed = app.placed[r][c];
+
+        if (placed) {
+          app.placed[r][c] = null;
+          app.resources[placed] += 1;
+          drawCraft();
+          drawResources();
+          return;
+        }
+
+        if (!target) {
+          toast("这里不需要放豆子");
+          return;
+        }
+
+        if (!app.activeColor || app.resources[app.activeColor] <= 0) {
+          toast("该颜色豆子不足");
+          return;
+        }
+
+        if (app.activeColor !== target) {
+          cellEl.classList.add("wrong");
+          setTimeout(() => cellEl.classList.remove("wrong"), 220);
+          toast("颜色不匹配");
+          return;
+        }
+
+        app.placed[r][c] = app.activeColor;
+        app.resources[app.activeColor] -= 1;
+        sfxPlace();
+        drawCraft();
+        drawResources();
+
+        if (isCraftDone()) {
+          clearInterval(app.craftTimer);
+          refs.ironSweep.classList.add("play");
+          setTimeout(() => {
+            refs.ironSweep.classList.remove("play");
+            completeLevel();
+          }, 900);
+        }
+      }
+
+      function isCraftDone() {
+        for (let r = 0; r < SIZE; r += 1) {
+          for (let c = 0; c < SIZE; c += 1) {
+            if (app.targetMap[r][c] && app.placed[r][c] !== app.targetMap[r][c]) return false;
+          }
+        }
+        return true;
+      }
+
+      function toast(msg) {
+        refs.toast.textContent = msg;
+        refs.toast.classList.add("show");
+        clearTimeout(toast.t);
+        toast.t = setTimeout(() => refs.toast.classList.remove("show"), 1300);
+      }
+
+      function completeLevel() {
+        const bonus = 180 + app.level * 45 + app.steps * 15 + app.craftTime * 12;
+        addScore(bonus);
+        app.clearedLevels += 1;
+        sfxSuccess();
+        toast(`第${app.clearedLevels}关通关 +${bonus}分`);
+        app.level += 1;
+        app.phase = "transition";
+        setTimeout(() => {
+          if (app.phase === "transition") startLevel(false);
+        }, 900);
+      }
+
+      function endRun(detail) {
+        app.phase = "done";
+        clearInterval(app.craftTimer);
+        sfxFail();
+        const record = {
+          id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          score: app.score,
+          levels: app.clearedLevels
+        };
+        const list = getLeaderboard();
+        list.push(record);
+        list.sort((a, b) => b.score - a.score || b.levels - a.levels);
+        saveLeaderboard(list);
+        refs.resultTitle.textContent = "本局结束";
+        refs.resultText.textContent = `${detail}。本次通关 ${app.clearedLevels} 关，总分 ${app.score} 分。`;
+        renderLeaderboard(record.id);
+        refs.resultLayer.classList.remove("hidden");
+      }
+
+      function startLevel(showIntro) {
+        app.phase = "collect";
+        app.hardLevel = isHardLevel(app.level);
+        applyDifficultyUI();
+        app.steps = levelStepLimit(app.level);
+        app.selected = null;
+        const generated = generateTargetMap(app.level);
+        app.targetMap = generated.map;
+        app.currentAnimal = generated.animalName;
+        app.needed = initNeeded();
+        app.collected = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
+        app.resources = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
+        app.placed = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+        app.activeColor = null;
+        app.locked = false;
+        refs.phaseLabel.textContent = `第${app.level}关${app.hardLevel ? " · 超难" : ""} · 收集豆子`;
+        refs.timerText.classList.remove("warn");
+        refs.timerText.textContent = `步数 ${app.steps}`;
+        refs.stepText.textContent = app.steps;
+        refs.resultLayer.classList.add("hidden");
+        refs.collectPhase.classList.remove("phase-hidden");
+        refs.craftPhase.classList.add("phase-hidden");
+        updateRunStats();
+
+        app.board = createBoard();
+        drawMini(refs.miniTarget);
+        drawMini(refs.overlayMini);
+        drawNeedList();
+        drawProgress();
+        renderBoard();
+        refs.introTitle.textContent = `${app.currentAnimal}拼豆图`;
+        refs.introDesc.textContent = `${app.hardLevel ? "超难关" : "普通关"}：先收集再拼搭，拼豆时间 ${levelCraftTime(app.level)} 秒`;
+        if (app.hardLevel) sfxHardAlert();
+        refreshBgm();
+
+        const introMs = showIntro ? 3000 : 1400;
+        refs.introOverlay.classList.remove("hidden");
+        setTimeout(() => {
+          refs.introOverlay.classList.add("hidden");
+        }, introMs);
+      }
+
+      function resetGame() {
+        clearInterval(app.craftTimer);
+        app.level = 1;
+        app.clearedLevels = 0;
+        app.score = 0;
+        app.lastAnimal = "";
+        app.animalQueue = [];
+        startLevel(true);
+      }
+
+      function showStartMenu() {
+        app.phase = "idle";
+        app.hardLevel = false;
+        applyDifficultyUI();
+        refs.startLayer.classList.remove("hidden");
+        refs.introOverlay.classList.add("hidden");
+        refs.resultLayer.classList.add("hidden");
+        renderLeaderboard();
+      }
+
+      refs.restartBtn.onclick = resetGame;
+      refs.restartBtn.type = "button";
+      refs.startGameBtn.onclick = () => {
+        refs.startLayer.classList.add("hidden");
+        resetGame();
+      };
+      refs.shareGameBtn.onclick = () => shareGame("我在玩拼豆猫，来一起拼小动物吧。");
+      refs.soundBtn.onclick = () => {
+        ensureAudio();
+        audio.enabled = !audio.enabled;
+        if (audio.enabled) startBgm();
+        else stopBgm();
+        updateSoundButton();
+      };
+      refs.shareBtn.onclick = () => shareGame();
+      document.addEventListener(
+        "pointerdown",
+        () => {
+          ensureAudio();
+          if (audio.ctx && audio.ctx.state === "suspended") audio.ctx.resume();
+        },
+        { once: true }
+      );
+      updateSoundButton();
+      showStartMenu();
+    </script>
+  </body>
+</html>
