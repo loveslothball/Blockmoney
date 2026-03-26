@@ -6,10 +6,13 @@
     ctx: null,
     enabled: true,
     bgmTimer: null,
-    bgmStep: 0
+    bgmStep: 0,
+    bgmMode: "collect",
+    lastPhrase: -1,
+    lastSection: -1
   };
 
-  function playTone(freq, duration = 0.12, type = "square", volume = 0.05, when = 0) {
+  function playTone(freq, duration = 0.12, type = "square", volume = 0.05, when = 0, attack = 0.01) {
     if (!audio.enabled || !audio.ctx) return;
     const t0 = audio.ctx.currentTime + when;
     const osc = audio.ctx.createOscillator();
@@ -17,11 +20,35 @@
     osc.type = type;
     osc.frequency.setValueAtTime(freq, t0);
     gain.gain.setValueAtTime(0, t0);
-    gain.gain.linearRampToValueAtTime(volume, t0 + 0.01);
+    gain.gain.linearRampToValueAtTime(volume, t0 + attack);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
     osc.connect(gain).connect(audio.ctx.destination);
     osc.start(t0);
     osc.stop(t0 + duration + 0.01);
+  }
+
+  function playNoise(duration = 0.08, volume = 0.01, when = 0, attack = 0.005, tone = 1800) {
+    if (!audio.enabled || !audio.ctx) return;
+    const t0 = audio.ctx.currentTime + when;
+    const buffer = audio.ctx.createBuffer(1, Math.max(1, Math.floor(audio.ctx.sampleRate * duration)), audio.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i += 1) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    }
+
+    const source = audio.ctx.createBufferSource();
+    const filter = audio.ctx.createBiquadFilter();
+    const gain = audio.ctx.createGain();
+    source.buffer = buffer;
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(tone, t0);
+    filter.Q.value = 0.8;
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(volume, t0 + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    source.connect(filter).connect(gain).connect(audio.ctx.destination);
+    source.start(t0);
+    source.stop(t0 + duration + 0.01);
   }
 
   function sfxMatch(count) {
@@ -47,15 +74,25 @@
   }
 
   function sfxFail() {
-    playTone(293, 0.18, "triangle", 0.03);
-    playTone(220, 0.24, "sine", 0.024, 0.08);
-    playTone(174, 0.32, "sine", 0.02, 0.16);
+    playTone(293, 0.18, "triangle", 0.026);
+    playTone(246.94, 0.22, "triangle", 0.022, 0.08);
+    playTone(220, 0.28, "sine", 0.018, 0.16);
+    playTone(174.61, 0.42, "sine", 0.016, 0.24, 0.03);
   }
 
   function sfxSuccess() {
-    const notes = [523, 659, 784, 988, 1174];
-    notes.forEach((n, i) => playTone(n, 0.14, "triangle", 0.03, i * 0.06));
-    playTone(196, 0.34, "sine", 0.02, 0.04);
+    const notes = [523.25, 659.25, 783.99, 987.77, 1174.66, 1318.51];
+    notes.forEach((n, i) => playTone(n, 0.14 + i * 0.015, i % 2 === 0 ? "triangle" : "sine", 0.026, i * 0.055, 0.02));
+    playTone(196, 0.48, "sine", 0.016, 0.02, 0.06);
+  }
+
+  function sfxPhaseShift(mode) {
+    if (mode === "craft") {
+      [392.0, 523.25, 659.25, 783.99].forEach((note, i) => playTone(note, 0.16, "sine", 0.018, i * 0.07, 0.03));
+      playTone(196.0, 0.42, "triangle", 0.015, 0.02, 0.05);
+      return;
+    }
+    [329.63, 392.0, 493.88, 587.33].forEach((note, i) => playTone(note, 0.12, "triangle", 0.016, i * 0.055, 0.02));
   }
 
   function sfxHardAlert() {
@@ -71,46 +108,147 @@
     }
   }
 
-  function playBgmStep(step) {
-    const progression = app.hardLevel
-      ? [
-          { bass: 174, chord: [261.63, 311.13, 392.0], pedal: 130.81 },
-          { bass: 155.56, chord: [233.08, 293.66, 349.23], pedal: 116.54 },
-          { bass: 146.83, chord: [220.0, 261.63, 329.63], pedal: 110.0 },
-          { bass: 155.56, chord: [233.08, 293.66, 369.99], pedal: 116.54 }
+  function currentTheme() {
+    const mode = app.phase === "craft" ? "craft" : "collect";
+    audio.bgmMode = mode;
+    const themes = {
+      collect: {
+        tempo: app.hardLevel ? 320 : 360,
+        stepLength: 16,
+        progression: [
+          {
+            root: 196.0,
+            bass: [196.0, null, 293.66, null, 246.94, null, 293.66, 220.0, 196.0, null, 293.66, null, 246.94, null, 220.0, 196.0],
+            chord: [293.66, 392.0, 493.88],
+            melody: [587.33, 659.25, 783.99, 659.25, 587.33, 523.25, 493.88, 523.25, 659.25, 783.99, 880.0, 783.99, 698.46, 659.25, 587.33, 523.25],
+            counter: [392.0, null, 440.0, null, 392.0, null, 369.99, null, 440.0, null, 493.88, null, 440.0, null, 392.0, null],
+            pulse: [1, 0, 0.45, 0, 0.7, 0, 0.45, 0, 1, 0, 0.45, 0, 0.8, 0, 0.45, 0],
+            drone: 146.83
+          },
+          {
+            root: 220.0,
+            bass: [220.0, null, 329.63, null, 277.18, null, 329.63, 246.94, 220.0, null, 329.63, null, 277.18, null, 246.94, 220.0],
+            chord: [329.63, 440.0, 523.25],
+            melody: [659.25, 698.46, 783.99, 880.0, 783.99, 698.46, 659.25, 587.33, 698.46, 783.99, 880.0, 987.77, 880.0, 783.99, 698.46, 659.25],
+            counter: [440.0, null, 493.88, null, 440.0, null, 392.0, null, 493.88, null, 523.25, null, 493.88, null, 440.0, null],
+            pulse: [1, 0, 0.45, 0, 0.7, 0, 0.45, 0, 1, 0, 0.45, 0, 0.8, 0, 0.45, 0],
+            drone: 164.81
+          },
+          {
+            root: 174.61,
+            bass: [174.61, null, 261.63, null, 220.0, null, 261.63, 196.0, 174.61, null, 261.63, null, 220.0, null, 196.0, 174.61],
+            chord: [261.63, 349.23, 440.0],
+            melody: [523.25, 587.33, 659.25, 587.33, 523.25, 493.88, 440.0, 493.88, 587.33, 659.25, 783.99, 659.25, 587.33, 523.25, 493.88, 440.0],
+            counter: [349.23, null, 392.0, null, 349.23, null, 329.63, null, 392.0, null, 440.0, null, 392.0, null, 349.23, null],
+            pulse: [1, 0, 0.42, 0, 0.66, 0, 0.42, 0, 1, 0, 0.42, 0, 0.74, 0, 0.42, 0],
+            drone: 130.81
+          }
         ]
-      : [
-          { bass: 196.0, chord: [293.66, 392.0, 493.88], pedal: 146.83 },
-          { bass: 220.0, chord: [329.63, 440.0, 523.25], pedal: 164.81 },
-          { bass: 174.61, chord: [261.63, 349.23, 440.0], pedal: 130.81 },
-          { bass: 196.0, chord: [293.66, 392.0, 523.25], pedal: 146.83 }
-        ];
-    const section = progression[Math.floor(step / 4) % progression.length];
-    const sub = step % 4;
-    const arpIndex = [0, 1, 2, 1][sub];
-    const leadNote = section.chord[arpIndex];
-    const harmony = section.chord[(arpIndex + 1) % section.chord.length];
-    playTone(section.pedal, 0.38, "sine", app.hardLevel ? 0.014 : 0.012);
-    playTone(section.bass, 0.22, "triangle", app.hardLevel ? 0.026 : 0.022, 0.02);
-    playTone(leadNote, 0.18, "triangle", app.hardLevel ? 0.02 : 0.018, 0.06);
-    playTone(harmony * 2, 0.11, "sine", app.hardLevel ? 0.01 : 0.008, 0.16);
+      },
+      craft: {
+        tempo: app.hardLevel ? 430 : 480,
+        stepLength: 16,
+        progression: [
+          {
+            root: 196.0,
+            bass: [196.0, null, null, 246.94, null, null, 220.0, null, 196.0, null, null, 246.94, null, null, 220.0, null],
+            chord: [293.66, 392.0, 493.88],
+            melody: [392.0, 493.88, 587.33, 659.25, 587.33, 493.88, 440.0, 392.0, 440.0, 493.88, 587.33, 739.99, 659.25, 587.33, 493.88, 440.0],
+            counter: [293.66, null, null, 392.0, null, null, 349.23, null, 329.63, null, null, 392.0, null, null, 349.23, null],
+            pulse: [0.7, 0, 0.28, 0, 0.5, 0, 0.24, 0, 0.7, 0, 0.28, 0, 0.54, 0, 0.24, 0],
+            drone: 146.83
+          },
+          {
+            root: 164.81,
+            bass: [164.81, null, null, 220.0, null, null, 196.0, null, 164.81, null, null, 220.0, null, null, 196.0, null],
+            chord: [246.94, 329.63, 392.0],
+            melody: [392.0, 440.0, 523.25, 587.33, 523.25, 440.0, 392.0, 329.63, 392.0, 440.0, 523.25, 659.25, 587.33, 523.25, 440.0, 392.0],
+            counter: [246.94, null, null, 329.63, null, null, 293.66, null, 293.66, null, null, 349.23, null, null, 329.63, null],
+            pulse: [0.7, 0, 0.28, 0, 0.5, 0, 0.24, 0, 0.7, 0, 0.28, 0, 0.54, 0, 0.24, 0],
+            drone: 123.47
+          },
+          {
+            root: 174.61,
+            bass: [174.61, null, null, 220.0, null, null, 261.63, null, 174.61, null, null, 220.0, null, null, 261.63, null],
+            chord: [261.63, 349.23, 440.0],
+            melody: [440.0, 523.25, 587.33, 659.25, 587.33, 523.25, 493.88, 440.0, 493.88, 523.25, 587.33, 698.46, 659.25, 587.33, 523.25, 493.88],
+            counter: [261.63, null, null, 349.23, null, null, 329.63, null, 293.66, null, null, 349.23, null, null, 329.63, null],
+            pulse: [0.66, 0, 0.26, 0, 0.46, 0, 0.22, 0, 0.66, 0, 0.26, 0, 0.5, 0, 0.22, 0],
+            drone: 130.81
+          }
+        ]
+      }
+    };
+    return themes[mode];
+  }
+
+  function playBgmStep(step) {
+    const theme = currentTheme();
+    const phrase = theme.progression[Math.floor(step / theme.stepLength) % theme.progression.length];
+    const phraseIndex = Math.floor(step / theme.stepLength) % theme.progression.length;
+    const sectionIndex = Math.floor(step / (theme.stepLength * theme.progression.length)) % 2;
+    const beat = step % theme.stepLength;
+    const bass = phrase.bass[beat];
+    const lead = phrase.melody[beat];
+    const chordTone = phrase.chord[beat % phrase.chord.length];
+    const highTone = phrase.chord[(beat + 1) % phrase.chord.length] * 2;
+    const counter = phrase.counter?.[beat] || null;
+    const enterPhrase = beat === 0 && audio.lastPhrase !== phraseIndex;
+    const enterSection = phraseIndex === 0 && beat === 0 && audio.lastSection !== sectionIndex;
+    audio.lastPhrase = phraseIndex;
+    audio.lastSection = sectionIndex;
+    const leadGain = app.phase === "craft" ? 0.011 : 0.014 + (sectionIndex === 1 ? 0.0016 : 0);
+    const chordGain = app.phase === "craft" ? 0.012 : 0.014;
+
+    playTone(phrase.drone, theme.tempo / 1000 * 4.6, "sine", app.phase === "craft" ? 0.0048 : 0.0056, 0, 0.12);
+    playTone(phrase.root / 2, theme.tempo / 1000 * 2.5, "sine", app.phase === "craft" ? 0.0075 : 0.0088, 0, 0.05);
+    playTone(chordTone, theme.tempo / 1000 * 1.9, "triangle", chordGain, 0.04, 0.04);
+    if (bass) {
+      playTone(bass, theme.tempo / 1000 * 0.9, "triangle", app.phase === "craft" ? 0.018 : 0.022, 0.01, 0.02);
+    }
+    if (counter) {
+      playTone(counter, theme.tempo / 1000 * 0.9, "triangle", app.phase === "craft" ? 0.0072 : 0.0088, 0.23, 0.04);
+    }
+    if (beat % 2 === 0) {
+      playTone(highTone, theme.tempo / 1000 * 0.72, "sine", app.phase === "craft" ? 0.0056 : 0.0076, 0.12, 0.03);
+    }
+    if (phrase.pulse?.[beat]) {
+      playNoise(theme.tempo / 1000 * 0.16, app.phase === "craft" ? 0.0032 * phrase.pulse[beat] : 0.0042 * phrase.pulse[beat], 0.05, 0.004, app.phase === "craft" ? 1250 : 1650);
+    }
+    playTone(
+      lead * (sectionIndex === 1 && beat >= 8 && app.phase === "collect" ? 1.12246 : 1),
+      theme.tempo / 1000 * (app.phase === "craft" ? 1.08 : 0.8),
+      app.phase === "craft" ? "triangle" : "sine",
+      leadGain,
+      0.16,
+      0.06
+    );
+    if (enterPhrase) {
+      playTone(phrase.chord[0] * 2, theme.tempo / 1000 * 0.6, "sine", 0.006, 0.08, 0.05);
+    }
+    if (enterSection) {
+      playTone(phrase.chord[2] * 2, theme.tempo / 1000 * 0.86, "sine", 0.007, 0.02, 0.08);
+      playNoise(theme.tempo / 1000 * 0.2, app.phase === "craft" ? 0.0028 : 0.0038, 0.03, 0.004, app.phase === "craft" ? 1100 : 1800);
+    }
   }
 
   function startBgm() {
     if (!audio.ctx || !audio.enabled || audio.bgmTimer) return;
+    const theme = currentTheme();
     playBgmStep(audio.bgmStep++);
-    const tempo = app.hardLevel ? 360 : 430;
     audio.bgmTimer = setInterval(() => {
       if (!audio.enabled) return;
       if (audio.ctx.state === "suspended") audio.ctx.resume();
       playBgmStep(audio.bgmStep++);
-    }, tempo);
+    }, theme.tempo);
   }
 
   function refreshBgm() {
     if (!audio.ctx || !audio.enabled) return;
     stopBgm();
     audio.bgmStep = 0;
+    audio.lastPhrase = -1;
+    audio.lastSection = -1;
     startBgm();
   }
 
@@ -135,6 +273,7 @@
     sfxFail,
     sfxSuccess,
     sfxHardAlert,
+    sfxPhaseShift,
     startBgm,
     stopBgm,
     refreshBgm,

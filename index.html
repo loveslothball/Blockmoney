@@ -255,6 +255,30 @@
         border-radius: 6px;
         padding: 8px 6px;
         text-align: center;
+        transition: transform 180ms ease-out, box-shadow 180ms ease-out;
+      }
+
+      .progress-item.hit {
+        animation: meterPop 300ms ease-out;
+      }
+
+      .progress-item.urgent {
+        border-color: #d09c33;
+        box-shadow: 0 0 0 3px rgba(208, 156, 51, 0.18);
+      }
+
+      .progress-item.urgent .dot {
+        animation: urgentPulse 900ms ease-in-out infinite;
+      }
+
+      .progress-item.done {
+        background: linear-gradient(180deg, #f1fffa, #e0fff2);
+        border-color: #28a170;
+      }
+
+      .progress-item.done strong,
+      .progress-item.done small {
+        color: #166f4b;
       }
 
       .progress-item .dot {
@@ -290,6 +314,10 @@
         display: grid;
         grid-template-columns: repeat(var(--grid-size), 1fr);
         gap: 4px;
+      }
+
+      .board {
+        touch-action: none;
       }
 
       .cell,
@@ -438,6 +466,11 @@
         background: rgba(216, 75, 82, 0.24);
       }
 
+      .craft-cell.focus-gap {
+        box-shadow: 0 0 0 3px rgba(208, 156, 51, 0.24);
+        animation: focusGapPulse 980ms ease-in-out infinite;
+      }
+
       .outline-dot {
         width: 42%;
         height: auto;
@@ -452,6 +485,37 @@
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 8px;
+      }
+
+      .craft-preview {
+        padding: 10px 12px;
+        display: grid;
+        grid-template-columns: 84px 1fr;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .craft-preview-copy {
+        display: grid;
+        gap: 4px;
+      }
+
+      .craft-preview-copy strong {
+        font-size: 13px;
+      }
+
+      .craft-preview-copy span {
+        font-size: 11px;
+        color: var(--ink-soft);
+        line-height: 1.5;
+      }
+
+      .craft-preview-copy em {
+        display: block;
+        margin-top: 2px;
+        font-style: normal;
+        font-size: 11px;
+        color: #8e5c10;
       }
 
       .resource-btn {
@@ -522,6 +586,11 @@
 
       .combo-fx.show {
         animation: comboBanner 880ms cubic-bezier(0.2, 0.85, 0.25, 1) forwards;
+      }
+
+      .combo-fx.goal {
+        background: linear-gradient(135deg, rgba(20, 76, 54, 0.94), rgba(46, 133, 95, 0.9));
+        color: #efffed;
       }
 
       .combo-fx strong {
@@ -738,6 +807,53 @@
         color: var(--ink);
         font-weight: 700;
       }
+
+      .result-compare {
+        margin: 0 0 14px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .result-compare.hidden {
+        display: none;
+      }
+
+      .compare-card {
+        border: 2px solid rgba(49, 45, 60, 0.16);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.78);
+        padding: 8px;
+      }
+
+      .compare-card strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 11px;
+        color: var(--ink-soft);
+      }
+
+      .compare-grid {
+        width: min(100%, 128px);
+        aspect-ratio: 1;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(var(--grid-size), 1fr);
+        gap: 2px;
+        background: #8f8a9e;
+        border-radius: 4px;
+        padding: 4px;
+      }
+
+      .compare-cell {
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .compare-cell.miss {
+        background: rgba(216, 75, 82, 0.2);
+        box-shadow: inset 0 0 0 1px rgba(216, 75, 82, 0.32);
+      }
       .stats-strip {
         margin-top: 12px;
         display: grid;
@@ -771,6 +887,50 @@
       }
       .help-copy strong {
         color: #fff;
+      }
+
+      .history-shell {
+        margin-top: 14px;
+        max-height: min(52dvh, 420px);
+        overflow: auto;
+        padding-right: 4px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .history-shell.empty {
+        display: block;
+        color: rgba(255, 255, 255, 0.76);
+        font-size: 12px;
+        line-height: 1.7;
+      }
+
+      .history-card {
+        display: grid;
+        grid-template-columns: 84px 1fr;
+        gap: 10px;
+        align-items: center;
+        border: 2px solid rgba(255, 255, 255, 0.16);
+        border-radius: 10px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .history-meta {
+        display: grid;
+        gap: 6px;
+        text-align: left;
+      }
+
+      .history-meta strong {
+        font-size: 13px;
+        color: #fff;
+      }
+
+      .history-meta span {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.8);
+        line-height: 1.5;
       }
 
       .iron-sweep {
@@ -958,6 +1118,45 @@
         }
       }
 
+      @keyframes meterPop {
+        0% {
+          transform: scale(1);
+          box-shadow: none;
+        }
+        40% {
+          transform: scale(1.06);
+          box-shadow: 0 0 0 4px rgba(255, 216, 111, 0.28);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: none;
+        }
+      }
+
+      @keyframes urgentPulse {
+        0%,
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(208, 156, 51, 0.18);
+        }
+        50% {
+          transform: scale(1.08);
+          box-shadow: 0 0 0 6px rgba(208, 156, 51, 0.08);
+        }
+      }
+
+      @keyframes focusGapPulse {
+        0%,
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 2px rgba(208, 156, 51, 0.18);
+        }
+        50% {
+          transform: scale(1.04);
+          box-shadow: 0 0 0 5px rgba(208, 156, 51, 0.1);
+        }
+      }
+
       @keyframes beanDrop {
         0% {
           transform: translateY(calc(var(--fall-distance, 1) * -118%));
@@ -1108,6 +1307,10 @@
         .target-row {
           grid-template-columns: 78px 1fr;
         }
+        .craft-preview {
+          grid-template-columns: 68px 1fr;
+          padding: 8px;
+        }
         .mini-grid {
           width: 58px;
           height: 58px;
@@ -1173,6 +1376,18 @@
         .combo-fx {
           top: calc(env(safe-area-inset-top, 0px) + 68px);
         }
+        .result-compare {
+          gap: 8px;
+        }
+        .compare-grid {
+          width: min(100%, 112px);
+          gap: 1px;
+          padding: 3px;
+        }
+        .history-card {
+          grid-template-columns: 68px 1fr;
+          padding: 8px;
+        }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -1225,6 +1440,14 @@
         </div>
 
         <div class="phase-wrap phase-hidden" id="craftPhase">
+          <div class="craft-preview panel">
+            <div class="mini-grid" id="craftReference"></div>
+            <div class="craft-preview-copy">
+              <strong id="craftPreviewTitle">参考图</strong>
+              <span id="craftPreviewText">照着目标图把颜色豆放进对应位置。</span>
+              <em id="craftPreviewHint">先选一种颜色，再点到对应的空位里。</em>
+            </div>
+          </div>
           <div class="board-wrap panel">
             <div class="craft-grid" id="craftGrid"></div>
           </div>
@@ -1258,7 +1481,19 @@
           <div class="menu-actions">
             <button id="startGameBtn" class="menu-btn" type="button">开始游戏</button>
             <button id="helpMenuBtn" class="menu-btn" type="button">玩法说明</button>
+            <button id="historyBtn" class="menu-btn" type="button">我的图鉴</button>
             <button id="shareGameBtn" class="menu-btn" type="button">分享游戏</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="historyLayer">
+        <div class="overlay-card">
+          <h2>我的图鉴</h2>
+          <p>这里会收录你成功拼出的图案。</p>
+          <div class="history-shell empty" id="historyList">还没有收录图案，先去通关一局吧。</div>
+          <div class="menu-actions">
+            <button id="closeHistoryBtn" class="menu-btn" type="button">关闭</button>
           </div>
         </div>
       </div>
@@ -1324,6 +1559,16 @@
             <div class="result-stat">
               <strong id="resultLevels">0</strong>
               <span>通关</span>
+            </div>
+          </div>
+          <div class="result-compare hidden" id="resultCompare">
+            <div class="compare-card">
+              <strong>目标图</strong>
+              <div class="compare-grid" id="answerGrid"></div>
+            </div>
+            <div class="compare-card">
+              <strong>你的拼图</strong>
+              <div class="compare-grid" id="attemptGrid"></div>
             </div>
           </div>
           <div class="leaderboard">

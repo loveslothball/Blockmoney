@@ -13,6 +13,7 @@
   const COLLECT_SIZE = 8;
   const START_STEPS = 28;
   const LEADERBOARD_KEY = "bean_game_leaderboard_v1";
+  const HISTORY_KEY = "bean_game_gallery_v1";
 
   const BASE_MASKS = [
     {
@@ -128,9 +129,11 @@
     selected: null,
     needed: {},
     collected: {},
+    completedGoals: {},
     resources: {},
     placed: [],
     activeColor: null,
+    hasCraftPlaced: false,
     craftTime: 48,
     craftTimer: null,
     levelTransitionTimer: null,
@@ -140,12 +143,17 @@
     comboTimer: null,
     celebrationTimer: null,
     locked: false,
-    paused: false
+    paused: false,
+    drag: null
   };
 
   const refs = {
     board: document.getElementById("board"),
     craftGrid: document.getElementById("craftGrid"),
+    craftReference: document.getElementById("craftReference"),
+    craftPreviewTitle: document.getElementById("craftPreviewTitle"),
+    craftPreviewText: document.getElementById("craftPreviewText"),
+    craftPreviewHint: document.getElementById("craftPreviewHint"),
     miniTarget: document.getElementById("miniTarget"),
     overlayMini: document.getElementById("overlayMini"),
     progressBoard: document.getElementById("progressBoard"),
@@ -171,10 +179,17 @@
     resultText: document.getElementById("resultText"),
     resultScore: document.getElementById("resultScore"),
     resultLevels: document.getElementById("resultLevels"),
+    resultCompare: document.getElementById("resultCompare"),
+    answerGrid: document.getElementById("answerGrid"),
+    attemptGrid: document.getElementById("attemptGrid"),
     introTitle: document.getElementById("introTitle"),
     introDesc: document.getElementById("introDesc"),
     startLayer: document.getElementById("startLayer"),
     startGameBtn: document.getElementById("startGameBtn"),
+    historyBtn: document.getElementById("historyBtn"),
+    historyLayer: document.getElementById("historyLayer"),
+    historyList: document.getElementById("historyList"),
+    closeHistoryBtn: document.getElementById("closeHistoryBtn"),
     shareGameBtn: document.getElementById("shareGameBtn"),
     leaderboardList: document.getElementById("leaderboardList"),
     restartBtn: document.getElementById("restartBtn"),
@@ -227,21 +242,66 @@
     const animal = pickAnimal();
     const targetSize = chooseCraftSize(level);
     const mask = resizeMask(animal.mask, targetSize);
-    const activeCount = Math.min(5, 3 + Math.floor((level - 1) / 2));
+    const activeCount = Math.min(5, Math.max(3, 3 + Math.floor((level - 1) / 3)));
     const palette = shuffle(COLOR_KEYS).slice(0, activeCount);
-    const map = Array.from({ length: targetSize }, () => Array(targetSize).fill(null));
-    for (let r = 0; r < targetSize; r += 1) {
-      for (let c = 0; c < targetSize; c += 1) {
+    const map = paintAnimalMap(animal.name, mask, palette);
+    return { map, animalName: animal.name, size: targetSize };
+  }
+
+  function paintAnimalMap(name, mask, palette) {
+    const size = mask.length;
+    const center = (size - 1) / 2;
+    const pick = (index) => palette[Math.min(palette.length - 1, index)];
+    const map = Array.from({ length: size }, () => Array(size).fill(null));
+
+    for (let r = 0; r < size; r += 1) {
+      for (let c = 0; c < size; c += 1) {
         if (!mask[r][c]) continue;
-        const rowBand = Math.floor((r / targetSize) * activeCount);
-        const colBand = Math.floor(
-          (Math.min(c, targetSize - 1 - c) / Math.ceil(targetSize / 2)) * Math.max(1, activeCount - 1)
-        );
-        const zone = (rowBand + colBand + (level % activeCount)) % activeCount;
-        map[r][c] = palette[zone];
+
+        let zone = 1;
+        const dx = Math.abs(c - center) / size;
+        const dy = r / size;
+
+        switch (name) {
+          case "猫咪":
+            if (dy < 0.24 && (c < size * 0.28 || c > size * 0.72)) zone = 0;
+            else if (dy > 0.68 && dx < 0.18) zone = 2;
+            else if (dy > 0.56 && dx > 0.28) zone = 3;
+            else zone = 1;
+            break;
+          case "兔兔":
+            if (dy < 0.4 && (c < size * 0.28 || c > size * 0.72)) zone = 0;
+            else if (dy > 0.74 && dx < 0.2) zone = 2;
+            else if (dy > 0.6 && dx > 0.24) zone = 3;
+            else zone = 1;
+            break;
+          case "小鱼":
+            if (c > size * 0.74) zone = 0;
+            else if (dy < 0.28 || dy > 0.72) zone = 2;
+            else if (c < size * 0.22) zone = 3;
+            else zone = 1;
+            break;
+          case "小龟":
+            if (dy > 0.72 || (dy > 0.56 && dx > 0.3)) zone = 0;
+            else if ((r + c) % 3 === 0 && dx < 0.26 && dy > 0.16 && dy < 0.7) zone = 2;
+            else if (dx < 0.34 && dy > 0.14 && dy < 0.68) zone = 1;
+            else zone = 3;
+            break;
+          case "小鸟":
+            if (c < size * 0.22 && dy > 0.36 && dy < 0.58) zone = 0;
+            else if (dx < 0.16 && dy > 0.26 && dy < 0.74) zone = 1;
+            else if (dy > 0.52 && dx < 0.24) zone = 2;
+            else zone = 3;
+            break;
+          default:
+            zone = Math.min(palette.length - 1, Math.floor((r / size) * palette.length));
+        }
+
+        map[r][c] = pick(zone);
       }
     }
-    return { map, animalName: animal.name, size: targetSize };
+
+    return map;
   }
 
   function initNeeded(targetMap) {
@@ -274,6 +334,7 @@
     COLLECT_SIZE,
     START_STEPS,
     LEADERBOARD_KEY,
+    HISTORY_KEY,
     ANIMAL_MASKS: BASE_MASKS
   };
 

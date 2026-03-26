@@ -1,6 +1,6 @@
 (() => {
   const G = window.BeanGame;
-  const { COLORS, COLOR_KEYS, LEADERBOARD_KEY, COLLECT_SIZE } = G.constants;
+  const { COLORS, COLOR_KEYS, LEADERBOARD_KEY, HISTORY_KEY, COLLECT_SIZE } = G.constants;
   const { app, refs } = G;
 
   function updateRunStats() {
@@ -44,6 +44,7 @@
   function showCombo(chain, count) {
     if (!refs.comboFx) return;
     clearTimeout(app.comboTimer);
+    refs.comboFx.classList.remove("goal");
     const labels = {
       2: "顺手两连",
       3: "漂亮三连",
@@ -55,6 +56,20 @@
     void refs.comboFx.offsetWidth;
     refs.comboFx.classList.add("show");
     app.comboTimer = setTimeout(() => refs.comboFx.classList.remove("show"), 900);
+  }
+
+  function showGoalComplete(color) {
+    if (!refs.comboFx) return;
+    clearTimeout(app.comboTimer);
+    refs.comboFx.classList.add("goal");
+    refs.comboFx.innerHTML = `<strong>${COLORS[color].name} 豆收齐</strong><span>这一色已经够用了，换下一个目标</span>`;
+    refs.comboFx.classList.remove("show");
+    void refs.comboFx.offsetWidth;
+    refs.comboFx.classList.add("show");
+    app.comboTimer = setTimeout(() => {
+      refs.comboFx.classList.remove("show");
+      refs.comboFx.classList.remove("goal");
+    }, 980);
   }
 
   function showCelebration({ bonus, nextLevel, hardLevel }) {
@@ -116,6 +131,27 @@
     }
   }
 
+  function getGallery() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveGallery(list) {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 24)));
+    } catch (e) {
+      if (!app.storageWarned) {
+        app.storageWarned = true;
+        toast("本地图鉴保存失败，已继续游戏");
+      }
+    }
+  }
+
   function renderLeaderboard(currentId = null) {
     const list = getLeaderboard();
     refs.leaderboardList.innerHTML = "";
@@ -141,25 +177,41 @@
   }
 
   function drawMini(gridEl) {
-    const size = app.targetMap.length;
+    drawPatternGrid(gridEl, app.targetMap, "mini-cell");
+  }
+
+  function drawPatternGrid(gridEl, map, baseClass = "mini-cell", attemptMap = null) {
+    const size = map.length;
     gridEl.style.setProperty("--grid-size", size);
     gridEl.innerHTML = "";
     for (let r = 0; r < size; r += 1) {
       for (let c = 0; c < size; c += 1) {
+        const target = map[r][c];
+        const attempt = attemptMap?.[r]?.[c] ?? null;
         const cell = document.createElement("div");
-        cell.className = "mini-cell" + (app.targetMap[r][c] ? " fill" : "");
-        if (app.targetMap[r][c]) cell.style.background = COLORS[app.targetMap[r][c]].hex;
+        cell.className = baseClass + (target ? " fill" : "");
+        if (baseClass === "compare-cell" && target && attempt !== target) cell.classList.add("miss");
+        if (attemptMap) {
+          if (attempt) cell.style.background = COLORS[attempt].hex;
+          else if (target) cell.style.background = COLORS[target].soft;
+        } else if (target) {
+          cell.style.background = COLORS[target].hex;
+        }
         gridEl.appendChild(cell);
       }
     }
   }
 
   function drawProgress() {
+    const remaining = COLOR_KEYS.map((k) => Math.max(app.needed[k] - app.collected[k], 0));
+    const focusRemain = Math.max(...remaining, 0);
     refs.progressBoard.innerHTML = "";
     COLOR_KEYS.forEach((k) => {
       const remain = Math.max(app.needed[k] - app.collected[k], 0);
       const el = document.createElement("div");
       el.className = "progress-item";
+      if (app.needed[k] > 0 && remain === 0) el.classList.add("done");
+      else if (app.needed[k] > 0 && remain === focusRemain && focusRemain > 0) el.classList.add("urgent");
       el.dataset.color = k;
       el.innerHTML = `<div class="dot" style="background:${COLORS[k].hex}"></div><strong>${remain}</strong><small>${COLORS[k].name}</small>`;
       refs.progressBoard.appendChild(el);
@@ -196,7 +248,6 @@
         } else {
           cell.setAttribute("aria-label", `棋盘第${r + 1}行第${c + 1}列，空格`);
         }
-        cell.onclick = () => onCellTap(r, c, cell);
         if (color) {
           const bean = document.createElement("div");
           bean.className = "bean";
@@ -221,6 +272,31 @@
 
   function drawCraft(onCraftCell) {
     const size = app.targetMap.length;
+    const remainByColor = Object.fromEntries(COLOR_KEYS.map((k) => [k, 0]));
+    let remainingSlots = 0;
+    for (let r = 0; r < size; r += 1) {
+      for (let c = 0; c < size; c += 1) {
+        const target = app.targetMap[r][c];
+        if (target && app.placed[r][c] !== target) {
+          remainByColor[target] += 1;
+          remainingSlots += 1;
+        }
+      }
+    }
+    const focusColor = app.activeColor && remainByColor[app.activeColor] > 0
+      ? app.activeColor
+      : COLOR_KEYS.reduce((best, key) => (remainByColor[key] > (remainByColor[best] || 0) ? key : best), COLOR_KEYS[0]);
+    const focusCount = remainByColor[focusColor] || 0;
+    refs.craftPreviewText.textContent = `还差 ${remainingSlots} 块，优先补 ${COLORS[focusColor].name} 色区域`;
+    if (remainingSlots === 0) {
+      refs.craftPreviewHint.textContent = "完工啦，马上进入通关动画。";
+    } else if (remainingSlots <= 4) {
+      refs.craftPreviewHint.textContent = "快完成了，收尾时盯住高亮缺口。";
+    } else if (!app.hasCraftPlaced) {
+      refs.craftPreviewHint.textContent = `首次落子建议：先点 ${COLORS[focusColor].name} 色高亮格，当前还差 ${focusCount} 块。`;
+    } else {
+      refs.craftPreviewHint.textContent = `当前最缺 ${COLORS[focusColor].name} 色，还差 ${focusCount} 块。`;
+    }
     refs.craftGrid.style.setProperty("--grid-size", size);
     refs.craftGrid.dataset.gridSize = String(size);
     refs.craftGrid.innerHTML = "";
@@ -237,6 +313,7 @@
         const label = target ? `目标格${r + 1}-${c + 1}，需要${COLORS[target].name}` : `空白格${r + 1}-${c + 1}`;
         cell.setAttribute("aria-label", label);
         if (target) cell.style.background = COLORS[target].soft;
+        if (target && !placed && target === focusColor) cell.classList.add("focus-gap");
 
         if (placed) {
           const bean = document.createElement("div");
@@ -268,6 +345,29 @@
     });
   }
 
+  function renderGallery() {
+    const list = getGallery();
+    refs.historyList.innerHTML = "";
+    refs.historyList.classList.toggle("empty", !list.length);
+    if (!list.length) {
+      refs.historyList.textContent = "还没有收录图案，先去通关一局吧。";
+      return;
+    }
+    list.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "history-card";
+      const grid = document.createElement("div");
+      grid.className = "mini-grid";
+      drawPatternGrid(grid, item.map, "mini-cell");
+      const meta = document.createElement("div");
+      meta.className = "history-meta";
+      meta.innerHTML = `<strong>${item.name}</strong><span>Lv.${item.level} · ${item.size}x${item.size}</span><span>${item.date}</span>`;
+      card.appendChild(grid);
+      card.appendChild(meta);
+      refs.historyList.appendChild(card);
+    });
+  }
+
   G.ui = {
     updateRunStats,
     applyDifficultyUI,
@@ -277,14 +377,19 @@
     updateCraftTimer,
     toast,
     showCombo,
+    showGoalComplete,
     showCelebration,
     showResult,
     showFailureResult,
     getLeaderboard,
     saveLeaderboard,
+    getGallery,
+    saveGallery,
     renderLeaderboard,
+    renderGallery,
     updateBestStats,
     drawMini,
+    drawPatternGrid,
     drawProgress,
     drawNeedList,
     renderBoard,

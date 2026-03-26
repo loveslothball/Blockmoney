@@ -13,20 +13,25 @@
     updateCraftTimer,
     toast,
     showCombo,
+    showGoalComplete,
     showCelebration,
     showFailureResult,
     getLeaderboard,
     saveLeaderboard,
+    getGallery,
+    saveGallery,
     renderLeaderboard,
+    renderGallery,
     updateBestStats,
     drawMini,
+    drawPatternGrid,
     drawProgress,
     drawNeedList,
     renderBoard,
     drawCraft,
     drawResources
   } = G.ui;
-  const { ensureAudio, sfxMatch, sfxCombo, sfxPlace, sfxFail, sfxSuccess, sfxHardAlert, startBgm, stopBgm, refreshBgm, updateSoundButton } =
+  const { ensureAudio, sfxMatch, sfxCombo, sfxPlace, sfxFail, sfxSuccess, sfxHardAlert, sfxPhaseShift, startBgm, stopBgm, refreshBgm, updateSoundButton } =
     G.audioApi;
   const audio = G.audio;
 
@@ -45,10 +50,36 @@
     app.specials[b.r][b.c] = t;
   }
 
+  function parseBoardCell(target) {
+    const cell = target?.closest?.(".cell");
+    if (!cell || !refs.board.contains(cell)) return null;
+    return {
+      r: Number(cell.dataset.r),
+      c: Number(cell.dataset.c)
+    };
+  }
+
+  function resetDrag() {
+    app.drag = null;
+  }
+
+  function triggerDragSwap(pos) {
+    if (!app.drag || app.drag.moved) return false;
+    const start = app.drag.start;
+    const near = Math.abs(start.r - pos.r) + Math.abs(start.c - pos.c) === 1;
+    if (!near) return false;
+    app.drag.moved = true;
+    onCellTap(start.r, start.c);
+    onCellTap(pos.r, pos.c);
+    return true;
+  }
+
   function expandMatchesWithSpecials(matchCells) {
     const mark = new Set(matchCells.map(({ r, c }) => `${r},${c}`));
+    const matchedSpecials = [];
     matchCells.forEach(({ r, c }) => {
       const special = app.specials[r][c];
+      if (special) matchedSpecials.push({ r, c, type: special });
       if (special === "cross") {
         for (let i = 0; i < COLLECT_SIZE; i += 1) {
           mark.add(`${r},${i}`);
@@ -63,6 +94,36 @@
         }
       }
     });
+    if (matchedSpecials.length >= 2) {
+      const comboKey = matchedSpecials
+        .map((item) => item.type)
+        .sort()
+        .join("+");
+      if (comboKey === "burst+cross") {
+        matchedSpecials.forEach(({ r, c }) => {
+          for (let rr = Math.max(0, r - 2); rr <= Math.min(COLLECT_SIZE - 1, r + 2); rr += 1) {
+            for (let cc = 0; cc < COLLECT_SIZE; cc += 1) mark.add(`${rr},${cc}`);
+          }
+          for (let cc = Math.max(0, c - 2); cc <= Math.min(COLLECT_SIZE - 1, c + 2); cc += 1) {
+            for (let rr = 0; rr < COLLECT_SIZE; rr += 1) mark.add(`${rr},${cc}`);
+          }
+        });
+      } else if (comboKey === "burst+burst") {
+        matchedSpecials.forEach(({ r, c }) => {
+          for (let rr = Math.max(0, r - 2); rr <= Math.min(COLLECT_SIZE - 1, r + 2); rr += 1) {
+            for (let cc = Math.max(0, c - 2); cc <= Math.min(COLLECT_SIZE - 1, c + 2); cc += 1) {
+              mark.add(`${rr},${cc}`);
+            }
+          }
+        });
+      } else if (comboKey === "cross+cross") {
+        for (let i = 0; i < COLLECT_SIZE; i += 1) {
+          for (let j = 0; j < COLLECT_SIZE; j += 1) {
+            if (i % 2 === 0 || j % 2 === 0) mark.add(`${i},${j}`);
+          }
+        }
+      }
+    }
     return Array.from(mark).map((key) => {
       const [r, c] = key.split(",").map(Number);
       return { r, c };
@@ -89,6 +150,49 @@
         endRun("时间到，拼搭失败");
       }
     }, 1000);
+  }
+
+  function resolveSpecialSwapCombo(a, b) {
+    const types = [app.specials[a.r][a.c], app.specials[b.r][b.c]].sort().join("+");
+    const mark = new Set([`${a.r},${a.c}`, `${b.r},${b.c}`]);
+
+    if (types === "burst+burst") {
+      [a, b].forEach(({ r, c }) => {
+        for (let rr = Math.max(0, r - 2); rr <= Math.min(COLLECT_SIZE - 1, r + 2); rr += 1) {
+          for (let cc = Math.max(0, c - 2); cc <= Math.min(COLLECT_SIZE - 1, c + 2); cc += 1) {
+            mark.add(`${rr},${cc}`);
+          }
+        }
+      });
+    } else if (types === "burst+cross") {
+      [a, b].forEach(({ r, c }) => {
+        for (let rr = Math.max(0, r - 2); rr <= Math.min(COLLECT_SIZE - 1, r + 2); rr += 1) {
+          for (let cc = 0; cc < COLLECT_SIZE; cc += 1) mark.add(`${rr},${cc}`);
+        }
+        for (let cc = Math.max(0, c - 2); cc <= Math.min(COLLECT_SIZE - 1, c + 2); cc += 1) {
+          for (let rr = 0; rr < COLLECT_SIZE; rr += 1) mark.add(`${rr},${cc}`);
+        }
+      });
+    } else if (types === "cross+cross") {
+      for (let r = 0; r < COLLECT_SIZE; r += 1) {
+        for (let c = 0; c < COLLECT_SIZE; c += 1) {
+          if (r % 2 === 0 || c % 2 === 0) mark.add(`${r},${c}`);
+        }
+      }
+    }
+
+    return Array.from(mark).map((key) => {
+      const [r, c] = key.split(",").map(Number);
+      return { r, c };
+    });
+  }
+
+  function registerGoalCompletion(color) {
+    if (!app.needed[color] || app.completedGoals[color]) return;
+    if (app.collected[color] < app.needed[color]) return;
+    app.completedGoals[color] = true;
+    showGoalComplete(color);
+    toast(`${COLORS[color].name} 豆已经收齐`);
   }
 
   function pauseGame() {
@@ -147,16 +251,22 @@
   function enterCraft() {
     app.phase = "craft";
     app.paused = false;
+    app.hasCraftPlaced = false;
     app.resources = { ...app.collected };
     app.activeColor = COLOR_KEYS.find((k) => app.resources[k] > 0) || "red";
     refs.collectPhase.classList.add("phase-hidden");
     refs.craftPhase.classList.remove("phase-hidden");
     refs.phaseLabel.textContent = `第${app.level}关${app.hardLevel ? " · 超难" : ""} · 拼搭图案`;
+    refs.craftPreviewTitle.textContent = `${app.currentAnimal}参考图`;
+    refs.craftPreviewText.textContent = `先补最亮的缺口区域，当前拼图尺寸 ${app.craftSize} x ${app.craftSize}`;
+    drawPatternGrid(refs.craftReference, app.targetMap, "mini-cell");
     app.craftTime = levelCraftTime(app.targetMap, app.hardLevel);
     updateCraftTimer();
     drawCraft(onCraftCell);
     drawResources(onPickColor);
     toast(`进入拼搭阶段，${app.craftTime} 秒内完成`);
+    sfxPhaseShift("craft");
+    refreshBgm();
     startCraftTimer();
     updateActionButtons();
   }
@@ -201,15 +311,34 @@
       fly.style.left = s.left + s.width / 2 - 10 + "px";
       fly.style.top = s.top + s.height / 2 - 10 + "px";
       fly.style.zIndex = 50;
-      fly.style.transition = "transform 0.58s cubic-bezier(.2,.8,.2,1), opacity 0.58s";
+      fly.style.pointerEvents = "none";
       document.body.appendChild(fly);
-      requestAnimationFrame(() => {
-        fly.style.transform = `translate(${t.left - s.left}px, ${t.top - s.top}px) scale(0.35)`;
-        fly.style.opacity = "0.16";
-      });
+      const dx = t.left - s.left;
+      const dy = t.top - s.top;
+      const item = target.closest(".progress-item");
+      if (item) {
+        item.classList.remove("hit");
+      }
+      fly.animate(
+        [
+          { transform: "translate(0, 0) scale(1)", opacity: 1 },
+          { transform: `translate(${dx * 0.48}px, ${dy * 0.56 - 28}px) scale(0.82)`, opacity: 1, offset: 0.58 },
+          { transform: `translate(${dx}px, ${dy}px) scale(0.34)`, opacity: 0.18 }
+        ],
+        {
+          duration: 620,
+          easing: "cubic-bezier(.2,.86,.24,1)",
+          fill: "forwards"
+        }
+      );
       tasks.push(
         new Promise((resolve) => {
           setTimeout(() => {
+            if (item) {
+              item.classList.add("hit");
+              setTimeout(() => item.classList.remove("hit"), 320);
+            }
+            registerGoalCompletion(color);
             fly.remove();
             resolve();
           }, 620);
@@ -285,7 +414,10 @@
     app.steps -= 1;
     refs.stepText.textContent = app.steps;
     refs.timerText.textContent = `步数 ${app.steps}`;
-    const matches = findMatches(app.board);
+    const specialA = app.specials[r][c];
+    const specialB = app.specials[app.selected.r][app.selected.c];
+    const comboMatches = specialA && specialB ? resolveSpecialSwapCombo({ r, c }, app.selected) : null;
+    const matches = comboMatches && comboMatches.length ? comboMatches : findMatches(app.board);
     if (!matches.length) {
       swap(app.board, app.selected, { r, c });
       swapSpecials(app.selected, { r, c });
@@ -331,6 +463,7 @@
     }
 
     app.placed[r][c] = app.activeColor;
+    app.hasCraftPlaced = true;
     app.resources[app.activeColor] -= 1;
     sfxPlace();
     drawCraft(onCraftCell);
@@ -351,6 +484,16 @@
     const bonus = 180 + app.level * 45 + app.steps * 15 + app.craftTime * 12;
     addScore(bonus);
     app.clearedLevels += 1;
+    const gallery = getGallery();
+    gallery.unshift({
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      name: app.currentAnimal,
+      level: app.level,
+      size: app.craftSize,
+      date: new Date().toLocaleDateString("zh-CN"),
+      map: app.targetMap.map((row) => [...row])
+    });
+    saveGallery(gallery);
     sfxSuccess();
     toast(`第${app.clearedLevels}关通关 +${bonus}分`);
     showCelebration({
@@ -385,10 +528,22 @@
     list.push(record);
     list.sort((a, b) => b.score - a.score || b.levels - a.levels);
     saveLeaderboard(list);
+    const compareEnabled = app.phase === "craft";
+    if (compareEnabled) {
+      refs.resultCompare.classList.remove("hidden");
+      drawPatternGrid(refs.answerGrid, app.targetMap, "compare-cell");
+      drawPatternGrid(refs.attemptGrid, app.targetMap, "compare-cell", app.placed);
+    } else {
+      refs.resultCompare.classList.add("hidden");
+      refs.answerGrid.innerHTML = "";
+      refs.attemptGrid.innerHTML = "";
+    }
     showFailureResult({
       badge: app.clearedLevels > 0 ? "挑战中断" : "首次尝试",
       title: app.clearedLevels > 0 ? "差一点就更远了" : "先热热身",
-      detail: `${detail}。本次通关 ${app.clearedLevels} 关，总分 ${app.score} 分。`,
+      detail: compareEnabled
+        ? `${detail}。下方能看到目标图和你的拼图对比，再来一次会更稳。`
+        : `${detail}。本次通关 ${app.clearedLevels} 关，总分 ${app.score} 分。`,
       score: app.score,
       levels: app.clearedLevels
     });
@@ -415,6 +570,7 @@
     app.craftSize = generated.size;
     app.needed = initNeeded(app.targetMap);
     app.collected = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
+    app.completedGoals = { red: false, blue: false, green: false, yellow: false, purple: false };
     app.resources = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
     app.boardFx = createCollectGrid(0);
     app.specials = createCollectGrid(null);
@@ -426,10 +582,12 @@
     refs.timerText.textContent = `步数 ${app.steps}`;
     refs.stepText.textContent = app.steps;
     refs.resultLayer.classList.add("hidden");
+    refs.resultCompare.classList.add("hidden");
     refs.celebrationLayer.classList.add("hidden");
     refs.celebrationLayer.classList.remove("show");
     refs.pauseLayer.classList.add("hidden");
     refs.helpLayer.classList.add("hidden");
+    refs.historyLayer.classList.add("hidden");
     refs.collectPhase.classList.remove("phase-hidden");
     refs.craftPhase.classList.add("phase-hidden");
     updateRunStats();
@@ -446,6 +604,7 @@
       app.hardLevel
     )} 秒`;
     if (app.hardLevel) sfxHardAlert();
+    sfxPhaseShift("collect");
     refreshBgm();
 
     const introMs = showIntro ? 3000 : 1400;
@@ -492,7 +651,9 @@
     refs.celebrationLayer.classList.add("hidden");
     refs.pauseLayer.classList.add("hidden");
     refs.helpLayer.classList.add("hidden");
+    refs.historyLayer.classList.add("hidden");
     renderLeaderboard();
+    renderGallery();
     updateBestStats();
     updateActionButtons();
   }
@@ -504,6 +665,11 @@
     resetGame();
   };
   refs.helpMenuBtn.onclick = showHelp;
+  refs.historyBtn.onclick = () => {
+    renderGallery();
+    refs.historyLayer.classList.remove("hidden");
+  };
+  refs.closeHistoryBtn.onclick = () => refs.historyLayer.classList.add("hidden");
   refs.helpBtn.onclick = showHelp;
   refs.closeHelpBtn.onclick = hideHelp;
   refs.pauseBtn.onclick = () => {
@@ -522,6 +688,34 @@
     updateSoundButton();
   };
   refs.shareBtn.onclick = () => shareGame();
+  refs.board.addEventListener("pointerdown", (e) => {
+    const pos = parseBoardCell(e.target);
+    if (!pos || app.phase !== "collect" || app.locked || app.paused) return;
+    app.drag = {
+      pointerId: e.pointerId,
+      start: pos,
+      moved: false
+    };
+  });
+  refs.board.addEventListener("pointermove", (e) => {
+    if (!app.drag || app.drag.pointerId !== e.pointerId) return;
+    const hit = document.elementFromPoint(e.clientX, e.clientY);
+    const pos = parseBoardCell(hit);
+    if (pos) triggerDragSwap(pos);
+  });
+  refs.board.addEventListener("pointerup", (e) => {
+    if (!app.drag || app.drag.pointerId !== e.pointerId) return;
+    if (!app.drag.moved) onCellTap(app.drag.start.r, app.drag.start.c);
+    resetDrag();
+  });
+  refs.board.addEventListener("pointercancel", resetDrag);
+  refs.board.addEventListener("pointerleave", (e) => {
+    if (!app.drag || app.drag.pointerId !== e.pointerId) return;
+    const hit = document.elementFromPoint(e.clientX, e.clientY);
+    const pos = parseBoardCell(hit);
+    if (pos) return;
+    resetDrag();
+  });
   document.addEventListener(
     "pointerdown",
     () => {
