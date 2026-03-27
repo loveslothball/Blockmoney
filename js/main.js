@@ -2,7 +2,7 @@
   const G = window.BeanGame;
   const { app, refs } = G;
   const { COLOR_KEYS, COLORS, COLLECT_SIZE } = G.constants;
-  const { generateTargetMap, resizeMask, initNeeded, levelStepLimit, levelShowcaseDuration, isHardLevel } = G.utils;
+  const { generateTargetMap, resizeMask, initNeeded, levelStepLimit, levelShowcaseDuration, isHardLevel, chooseCraftSize } = G.utils;
   const { swap, findMatches, hasAnyMove, createBoard, collapse, isCollectDone } = G.engine;
   const {
     updateRunStats,
@@ -35,6 +35,98 @@
     G.audioApi;
   const audio = G.audio;
   const isWechatBrowser = /MicroMessenger/i.test(navigator.userAgent);
+  const BEAN_RGB = {
+    red: [243, 127, 150],
+    blue: [114, 197, 255],
+    green: [105, 216, 167],
+    yellow: [255, 216, 111],
+    purple: [184, 156, 255]
+  };
+
+  function nearestBeanColor(r, g, b) {
+    let best = "yellow";
+    let bestDist = Infinity;
+    for (const key of COLOR_KEYS) {
+      const [cr, cg, cb] = BEAN_RGB[key];
+      const dr = r - cr;
+      const dg = g - cg;
+      const db = b - cb;
+      const dist = dr * dr + dg * dg + db * db;
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = key;
+      }
+    }
+    return best;
+  }
+
+  function isLikelyBgPixel(r, g, b, a) {
+    if (a < 20) return true;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const sat = max - min;
+    const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    return luma > 238 && sat < 18;
+  }
+
+  function renderCustomMapFromSource(dataUrl, size, keepBg = false) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) {
+          reject(new Error("无法初始化图像画布"));
+          return;
+        }
+        ctx.clearRect(0, 0, size, size);
+        ctx.imageSmoothingEnabled = true;
+        const scale = Math.min(size / img.width, size / img.height);
+        const dw = Math.max(1, Math.round(img.width * scale));
+        const dh = Math.max(1, Math.round(img.height * scale));
+        const dx = Math.floor((size - dw) / 2);
+        const dy = Math.floor((size - dh) / 2);
+        ctx.fillStyle = "rgba(255,255,255,0)";
+        ctx.fillRect(0, 0, size, size);
+        ctx.drawImage(img, dx, dy, dw, dh);
+        const pixels = ctx.getImageData(0, 0, size, size).data;
+        const map = Array.from({ length: size }, () => Array(size).fill(null));
+        let filled = 0;
+        for (let i = 0; i < size * size; i += 1) {
+          const p = i * 4;
+          const r = pixels[p];
+          const g = pixels[p + 1];
+          const b = pixels[p + 2];
+          const a = pixels[p + 3];
+          if (!keepBg && isLikelyBgPixel(r, g, b, a)) continue;
+          const rr = Math.floor(i / size);
+          const cc = i % size;
+          map[rr][cc] = nearestBeanColor(r, g, b);
+          filled += 1;
+        }
+        resolve({ map, filled });
+      };
+      img.onerror = () => reject(new Error("图片加载失败"));
+      img.src = dataUrl;
+    });
+  }
+
+  async function generateCustomTargetMap(level) {
+    const size = chooseCraftSize(level, isHardLevel(level));
+    if (app.customMapCache[size]) {
+      return { map: app.customMapCache[size], animalName: app.customImageName || "自定义图", size };
+    }
+    const firstPass = await renderCustomMapFromSource(app.customImageSource, size, false);
+    let finalMap = firstPass.map;
+    if (firstPass.filled < size * size * 0.12) {
+      const secondPass = await renderCustomMapFromSource(app.customImageSource, size, true);
+      finalMap = secondPass.map;
+    }
+    app.customMapCache[size] = finalMap;
+    return { map: finalMap, animalName: app.customImageName || "自定义图", size };
+  }
 
   function addScore(delta) {
     app.score += delta;
@@ -866,7 +958,7 @@
     updateActionButtons();
   }
 
-  function startLevel(showIntro) {
+  async function startLevel(showIntro) {
     app.phase = "collect";
     app.paused = false;
     clearTimeout(app.levelTransitionTimer);
@@ -875,13 +967,27 @@
     clearTimeout(app.comboTimer);
     app.hardLevel = isHardLevel(app.level);
     applyDifficultyUI();
-    app.steps = levelStepLimit(app.level);
     app.selected = null;
-    const generated = generateTargetMap(app.level);
+    let generated;
+    if (app.customImageEnabled && app.customImageSource) {
+      try {
+        generated = await generateCustomTargetMap(app.level);
+      } catch (err) {
+        app.customImageEnabled = false;
+        app.customImageSource = "";
+        app.customImageName = "";
+        app.customMapCache = {};
+        toast("自定义图片读取失败，已切回默认图案");
+        generated = generateTargetMap(app.level);
+      }
+    } else {
+      generated = generateTargetMap(app.level);
+    }
     app.targetMap = generated.map;
     app.currentAnimal = generated.animalName;
     app.craftSize = generated.size;
     app.needed = initNeeded(app.targetMap, app.level, app.hardLevel);
+    app.steps = levelStepLimit(app.needed, app.hardLevel);
     app.collected = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
     app.completedGoals = { red: false, blue: false, green: false, yellow: false, purple: false };
     app.resources = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
@@ -973,6 +1079,9 @@
     refs.pauseLayer.classList.add("hidden");
     refs.helpLayer.classList.add("hidden");
     refs.historyLayer.classList.add("hidden");
+    if (refs.uploadImageBtn) {
+      refs.uploadImageBtn.textContent = app.customImageEnabled ? "更换图片" : "上传图片";
+    }
     renderLeaderboard();
     renderGallery();
     updateBestStats();
@@ -984,6 +1093,47 @@
   refs.startGameBtn.onclick = () => {
     refs.startLayer.classList.add("hidden");
     resetGame();
+  };
+  refs.uploadImageBtn.onclick = () => {
+    if (!refs.customImageInput) return;
+    refs.customImageInput.value = "";
+    refs.customImageInput.click();
+  };
+  refs.customImageInput.onchange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast("请选择图片文件");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast("图片过大，请选 8MB 以内");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const src = String(reader.result || "");
+      if (!src) {
+        toast("图片读取失败");
+        return;
+      }
+      app.customImageEnabled = true;
+      app.customImageSource = src;
+      app.customImageName = (file.name || "自定义图").replace(/\.[^.]+$/, "").slice(0, 18) || "自定义图";
+      app.customMapCache = {};
+      try {
+        await generateCustomTargetMap(1);
+        if (refs.uploadImageBtn) refs.uploadImageBtn.textContent = "更换图片";
+        toast("自定义拼豆图已启用，会随关卡分辨率升级");
+      } catch (err) {
+        app.customImageEnabled = false;
+        app.customImageSource = "";
+        app.customImageName = "";
+        app.customMapCache = {};
+        toast("图片处理失败，请换一张再试");
+      }
+    };
+    reader.readAsDataURL(file);
   };
   refs.helpMenuBtn.onclick = showHelp;
   refs.historyBtn.onclick = () => {

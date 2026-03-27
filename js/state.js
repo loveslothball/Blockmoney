@@ -140,9 +140,8 @@
     );
   }
 
-  function chooseCraftSize(level) {
-    const sizes = [8, 10, 12, 16, 24, 32, 40, 48, 56, 64];
-    return sizes[Math.min(sizes.length - 1, Math.floor((level - 1) / 2))];
+  function chooseCraftSize(level, hardLevel = false) {
+    return hardLevel ? 64 : 32;
   }
 
   const app = {
@@ -188,6 +187,11 @@
     staleTurns: 0,
     hintMove: null,
     targetRuleWarned: false
+    ,
+    customImageEnabled: false,
+    customImageName: "",
+    customImageSource: "",
+    customMapCache: {}
   };
 
   const refs = {
@@ -229,6 +233,8 @@
     introDesc: document.getElementById("introDesc"),
     startLayer: document.getElementById("startLayer"),
     startGameBtn: document.getElementById("startGameBtn"),
+    uploadImageBtn: document.getElementById("uploadImageBtn"),
+    customImageInput: document.getElementById("customImageInput"),
     historyBtn: document.getElementById("historyBtn"),
     historyLayer: document.getElementById("historyLayer"),
     historyList: document.getElementById("historyList"),
@@ -321,7 +327,7 @@
 
   function generateTargetMap(level) {
     const animal = pickAnimal();
-    const targetSize = chooseCraftSize(level);
+    const targetSize = chooseCraftSize(level, isHardLevel(level));
     const palette = pickPaletteForAnimal(animal.name, level);
     const art = resizeMask(animal.art, targetSize);
     const map = buildMapFromArt(art, palette);
@@ -355,8 +361,10 @@
     return needed;
   }
 
-  function levelStepLimit(level) {
-    return START_STEPS + Math.min(10, Math.floor((level - 1) / 2));
+  function levelStepLimit(needed, hardLevel = false) {
+    const totalNeed = COLOR_KEYS.reduce((sum, key) => sum + (needed[key] || 0), 0);
+    const raw = Math.round(22 + totalNeed * 0.45 + Math.sqrt(Math.max(0, totalNeed)) * 1.6 + (hardLevel ? 4 : 0));
+    return Math.max(28, Math.min(150, raw));
   }
 
   function levelShowcaseDuration(targetMap, hardLevel = false) {
