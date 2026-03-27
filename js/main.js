@@ -421,30 +421,57 @@
   function stopShowcaseAnimation() {
     clearInterval(app.showcaseTimer);
     app.showcaseTimer = null;
+    app.showcaseRecent = [];
+  }
+
+  function buildShowcaseSequence() {
+    const size = app.targetMap.length;
+    const center = (size - 1) / 2;
+    const cells = [];
+    for (let r = 0; r < size; r += 1) {
+      for (let c = 0; c < size; c += 1) {
+        const color = app.targetMap[r][c];
+        if (!color) continue;
+        const distance = Math.abs(r - center) + Math.abs(c - center);
+        const wave = r + (r % 2 === 0 ? c / size : (size - c) / size);
+        cells.push({ r, c, color, distance, wave, tie: Math.random() });
+      }
+    }
+    if (size <= 16) {
+      cells.sort((a, b) => a.distance - b.distance || a.tie - b.tie);
+    } else {
+      cells.sort((a, b) => a.wave - b.wave || a.tie - b.tie);
+    }
+    return cells.map(({ r, c, color }) => ({ r, c, color }));
   }
 
   function startShowcaseAnimation() {
     stopShowcaseAnimation();
-    const cells = [];
-    for (let r = 0; r < app.targetMap.length; r += 1) {
-      for (let c = 0; c < app.targetMap.length; c += 1) {
-        if (app.targetMap[r][c]) cells.push({ r, c, color: app.targetMap[r][c] });
-      }
-    }
+    const cells = app.showcaseSequence.length ? app.showcaseSequence : buildShowcaseSequence();
+    app.showcaseSequence = cells;
     const duration = levelShowcaseDuration(app.targetMap, app.hardLevel);
     const tickMs = 34;
-    app.showcaseBatch = Math.max(1, Math.ceil(cells.length / Math.max(20, Math.round(duration / tickMs))));
+    const baseBatch = Math.max(1, Math.ceil(cells.length / Math.max(24, Math.round(duration / tickMs))));
+    app.showcaseBatch = baseBatch;
     if (!app.showcaseIndex) {
       app.placed = Array.from({ length: app.craftSize }, () => Array(app.craftSize).fill(null));
+      app.showcaseStage = "assemble";
       drawCraft();
       drawResources();
     }
+    if (app.showcaseIndex > 0 && app.showcaseIndex < cells.length) {
+      app.showcaseStage = app.showcaseIndex / cells.length > 0.85 ? "polish" : "assemble";
+    }
     app.showcaseTimer = setInterval(() => {
-      const nextChunk = cells.slice(app.showcaseIndex, app.showcaseIndex + app.showcaseBatch);
+      const progress = cells.length ? app.showcaseIndex / cells.length : 1;
+      const currentBatch = progress > 0.88 ? Math.max(1, Math.ceil(baseBatch * 0.45)) : progress > 0.62 ? Math.max(1, Math.ceil(baseBatch * 0.7)) : Math.max(1, Math.ceil(baseBatch * 1.2));
+      const nextChunk = cells.slice(app.showcaseIndex, app.showcaseIndex + currentBatch);
       nextChunk.forEach(({ r, c, color }) => {
         app.placed[r][c] = color;
       });
+      app.showcaseRecent = nextChunk.map(({ r, c }) => `${r},${c}`);
       app.showcaseIndex += nextChunk.length;
+      app.showcaseStage = app.showcaseIndex >= cells.length ? "finish" : app.showcaseIndex / cells.length > 0.85 ? "polish" : "assemble";
       drawCraft();
       drawResources();
       if (app.showcaseIndex >= cells.length) {
@@ -454,7 +481,7 @@
         setTimeout(() => {
           refs.ironSweep.classList.remove("play");
           completeLevel();
-        }, 980);
+        }, 1160);
       }
     }, tickMs);
   }
@@ -543,6 +570,9 @@
     clearWeakHint();
     app.staleTurns = 0;
     app.showcaseIndex = 0;
+    app.showcaseStage = "assemble";
+    app.showcaseSequence = buildShowcaseSequence();
+    app.showcaseRecent = [];
     refs.collectPhase.classList.add("phase-hidden");
     refs.craftPhase.classList.remove("phase-hidden");
     refs.phaseLabel.textContent = `第${app.level}关${app.hardLevel ? " · 超难" : ""} · 自动拼豆展示`;
@@ -865,6 +895,9 @@
     app.targetRuleWarned = false;
     app.showcaseIndex = 0;
     app.showcaseBatch = 1;
+    app.showcaseStage = "idle";
+    app.showcaseSequence = [];
+    app.showcaseRecent = [];
     app.placed = Array.from({ length: app.craftSize }, () => Array(app.craftSize).fill(null));
     app.locked = false;
     refs.phaseLabel.textContent = `第${app.level}关${app.hardLevel ? " · 超难" : ""} · 收集豆子`;

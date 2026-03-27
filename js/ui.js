@@ -317,13 +317,21 @@
         if (app.placed[r][c] === target) filledSlots += 1;
       }
     }
-    refs.craftPreviewText.textContent = `自动拼豆中：${filledSlots}/${totalSlots} 块 · 画布 ${size}x${size}`;
+    const ratio = totalSlots ? filledSlots / totalSlots : 1;
+    const stageLabel = app.showcaseStage === "polish" ? "细节收尾" : app.showcaseStage === "finish" ? "最终定格" : "自动组装";
+    refs.craftPreviewText.textContent = `${stageLabel}：${filledSlots}/${totalSlots} 块 · 画布 ${size}x${size}`;
     refs.craftPreviewHint.textContent =
-      filledSlots >= totalSlots
-        ? "拼豆图已经还原完成，正在准备过关结算。"
-        : "收集到的豆子会自动铺成图案，这一段是通关奖励展示。";
+      app.showcaseStage === "finish"
+        ? "图案已经完整还原，准备进入结算。"
+        : ratio > 0.85
+          ? "只剩最后一小段，正在修整轮廓和细节。"
+          : "收集到的豆子会自动铺成图案，这一段是通关奖励展示。";
     refs.craftGrid.style.setProperty("--grid-size", size);
     refs.craftGrid.dataset.gridSize = String(size);
+    refs.craftGrid.classList.toggle("revealing", app.showcaseStage === "assemble");
+    refs.craftGrid.classList.toggle("polishing", app.showcaseStage === "polish");
+    refs.craftGrid.classList.toggle("finished", app.showcaseStage === "finish");
+    const recentSet = new Set(app.showcaseRecent || []);
     refs.craftGrid.innerHTML = "";
     for (let r = 0; r < size; r += 1) {
       for (let c = 0; c < size; c += 1) {
@@ -336,6 +344,7 @@
         if (placed) {
           const bean = document.createElement("div");
           bean.className = "bean";
+          if (recentSet.has(`${r},${c}`)) bean.classList.add("showcase-recent");
           bean.style.background = COLORS[placed].hex;
           cell.appendChild(bean);
         } else if (target) {
@@ -351,6 +360,7 @@
 
   function drawResources() {
     const total = app.targetMap.reduce((sum, row) => sum + row.filter(Boolean).length, 0);
+    const stageText = app.showcaseStage === "polish" ? "细节收尾" : app.showcaseStage === "finish" ? "完成定格" : "自动组装";
     refs.resourcePanel.innerHTML = `
       <div class="resource-btn active" aria-label="自动拼豆信息">
         <div class="dot" style="background:var(--gold)"></div>
@@ -362,10 +372,10 @@
         <strong>${app.showcaseIndex}</strong>
         <div style="font-size:12px;color:var(--ink-soft)">当前已还原</div>
       </div>
-      <div class="resource-btn active" aria-label="图案总像素数">
+      <div class="resource-btn active" aria-label="展示阶段">
         <div class="dot" style="background:var(--blue)"></div>
-        <strong>${total}</strong>
-        <div style="font-size:12px;color:var(--ink-soft)">图案像素</div>
+        <strong>${stageText}</strong>
+        <div style="font-size:12px;color:var(--ink-soft)">像素 ${total}</div>
       </div>
     `;
   }

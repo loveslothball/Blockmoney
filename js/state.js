@@ -15,81 +15,116 @@
   const LEADERBOARD_KEY = "bean_game_leaderboard_v1";
   const HISTORY_KEY = "bean_game_gallery_v1";
 
+  function parseArt(lines) {
+    const width = lines.reduce((max, line) => Math.max(max, line.length), 0);
+    return lines.map((line) => line.padEnd(width, ".").slice(0, width).split(""));
+  }
+
   const BASE_MASKS = [
     {
+      name: "企鹅仔",
+      art: parseArt([
+        "......0000......",
+        "....00111100....",
+        "...0111111110...",
+        "..011440044110..",
+        "..011440044110..",
+        "..011133331110..",
+        "..011111111110..",
+        "..011122221110..",
+        "..011222222110..",
+        ".00112222221100.",
+        ".01112222221110.",
+        ".01111222211110.",
+        "..011111111110..",
+        "...0011111100...",
+        "....00300300....",
+        ".....000000....."
+      ])
+    },
+    {
       name: "猫咪",
-      mask: [
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 1, 0, 0, 0, 0, 0, 0, 1, 1],
-        [1, 1, 1, 0, 0, 0, 0, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 1, 1, 0, 1, 1, 0, 1, 1, 0],
-        [0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 0, 0, 0]
-      ]
+      art: parseArt([
+        ".....000000.....",
+        "...0001111000...",
+        "..001111111100..",
+        "..011440044110..",
+        ".01114444444110.",
+        ".01111111111110.",
+        ".01112222221110.",
+        ".01112222221110.",
+        ".01112222221110.",
+        ".01111111111110.",
+        "..011133333110..",
+        "..011033333110..",
+        "...0110..0110...",
+        "...010....010...",
+        "...000....000...",
+        "................"
+      ])
     },
     {
       name: "兔兔",
-      mask: [
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 1, 0, 0, 0, 0, 0, 0, 1, 1],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 0, 0, 0]
-      ]
-    },
-    {
-      name: "小鱼",
-      mask: [
-        [0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 0, 0, 1],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
-        [0, 0, 0, 1, 1, 1, 1, 0, 0, 1],
-        [0, 0, 0, 0, 1, 1, 0, 0, 0, 0]
-      ]
+      art: parseArt([
+        "....00....00....",
+        "...0110..0110...",
+        "...0110..0110...",
+        "..001110011100..",
+        "..011111111110..",
+        ".0114400444110..",
+        ".0111144441110..",
+        ".0111222222110..",
+        ".0111222222110..",
+        ".0111222222110..",
+        ".0111111111110..",
+        "..011133331110..",
+        "..001133331100..",
+        "...0110..0110...",
+        "...000....000...",
+        "................"
+      ])
     },
     {
       name: "小龟",
-      mask: [
-        [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 1, 1, 0, 1, 1, 0, 1, 1, 0],
-        [1, 0, 1, 0, 1, 1, 0, 1, 0, 1],
-        [0, 0, 1, 0, 0, 0, 0, 1, 0, 0]
-      ]
+      art: parseArt([
+        "................",
+        "...0000000000...",
+        "..011111111110..",
+        ".01111111111110.",
+        ".01112222111110.",
+        ".01112222111110.",
+        ".01111111111110.",
+        ".01111222111110.",
+        ".01111222111110.",
+        ".01111111111110.",
+        "..011111111110..",
+        "..0011001100....",
+        "...0100..0010...",
+        "...000....000...",
+        "................",
+        "................"
+      ])
     },
     {
-      name: "小鸟",
-      mask: [
-        [0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-        [1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
-        [0, 0, 0, 0, 1, 1, 0, 0, 0, 0]
-      ]
+      name: "小狐",
+      art: parseArt([
+        "....00....00....",
+        "...0110..0110...",
+        "..011111111110..",
+        ".01144004441110.",
+        ".01114444441110.",
+        ".01113333331110.",
+        ".01112222221110.",
+        ".01112222221110.",
+        ".01112222221110.",
+        ".01111111111110.",
+        "..011111111110..",
+        "..011100001110..",
+        "...0110001110...",
+        "...0011111100...",
+        "....00111100....",
+        "......0000......"
+      ])
     }
   ];
 
@@ -106,7 +141,7 @@
   }
 
   function chooseCraftSize(level) {
-    const sizes = [8, 12, 16, 24, 32, 40, 48, 56, 64];
+    const sizes = [8, 10, 12, 16, 24, 32, 40, 48, 56, 64];
     return sizes[Math.min(sizes.length - 1, Math.floor((level - 1) / 2))];
   }
 
@@ -137,6 +172,9 @@
     showcaseIndex: 0,
     showcaseBatch: 1,
     showcaseTimer: null,
+    showcaseStage: "idle",
+    showcaseSequence: [],
+    showcaseRecent: [],
     levelTransitionTimer: null,
     introOverlayTimer: null,
     storageWarned: false,
@@ -244,70 +282,50 @@
     return chosen;
   }
 
+  function pickPaletteForAnimal(name, level) {
+    const palettes = {
+      "企鹅仔": [
+        ["purple", "blue", "yellow", "red", "green"],
+        ["blue", "purple", "yellow", "red", "green"]
+      ],
+      "猫咪": [
+        ["purple", "yellow", "blue", "red", "green"],
+        ["blue", "yellow", "purple", "red", "green"]
+      ],
+      "兔兔": [
+        ["purple", "blue", "yellow", "red", "green"],
+        ["blue", "purple", "yellow", "red", "green"]
+      ],
+      "小龟": [
+        ["green", "yellow", "blue", "purple", "red"],
+        ["blue", "green", "yellow", "purple", "red"]
+      ],
+      "小狐": [
+        ["red", "yellow", "purple", "blue", "green"],
+        ["yellow", "red", "purple", "blue", "green"]
+      ]
+    };
+    const set = palettes[name] || [COLOR_KEYS];
+    return set[level % set.length].slice(0, 5);
+  }
+
+  function buildMapFromArt(art, palette) {
+    return art.map((row) =>
+      row.map((token) => {
+        if (token === ".") return null;
+        const colorIndex = Math.max(0, Math.min(palette.length - 1, Number(token) || 0));
+        return palette[colorIndex];
+      })
+    );
+  }
+
   function generateTargetMap(level) {
     const animal = pickAnimal();
     const targetSize = chooseCraftSize(level);
-    const mask = resizeMask(animal.mask, targetSize);
-    const activeCount = Math.min(5, Math.max(3, 3 + Math.floor((level - 1) / 3)));
-    const palette = shuffle(COLOR_KEYS).slice(0, activeCount);
-    const map = paintAnimalMap(animal.name, mask, palette);
+    const palette = pickPaletteForAnimal(animal.name, level);
+    const art = resizeMask(animal.art, targetSize);
+    const map = buildMapFromArt(art, palette);
     return { map, animalName: animal.name, size: targetSize };
-  }
-
-  function paintAnimalMap(name, mask, palette) {
-    const size = mask.length;
-    const center = (size - 1) / 2;
-    const pick = (index) => palette[Math.min(palette.length - 1, index)];
-    const map = Array.from({ length: size }, () => Array(size).fill(null));
-
-    for (let r = 0; r < size; r += 1) {
-      for (let c = 0; c < size; c += 1) {
-        if (!mask[r][c]) continue;
-
-        let zone = 1;
-        const dx = Math.abs(c - center) / size;
-        const dy = r / size;
-
-        switch (name) {
-          case "猫咪":
-            if (dy < 0.24 && (c < size * 0.28 || c > size * 0.72)) zone = 0;
-            else if (dy > 0.68 && dx < 0.18) zone = 2;
-            else if (dy > 0.56 && dx > 0.28) zone = 3;
-            else zone = 1;
-            break;
-          case "兔兔":
-            if (dy < 0.4 && (c < size * 0.28 || c > size * 0.72)) zone = 0;
-            else if (dy > 0.74 && dx < 0.2) zone = 2;
-            else if (dy > 0.6 && dx > 0.24) zone = 3;
-            else zone = 1;
-            break;
-          case "小鱼":
-            if (c > size * 0.74) zone = 0;
-            else if (dy < 0.28 || dy > 0.72) zone = 2;
-            else if (c < size * 0.22) zone = 3;
-            else zone = 1;
-            break;
-          case "小龟":
-            if (dy > 0.72 || (dy > 0.56 && dx > 0.3)) zone = 0;
-            else if ((r + c) % 3 === 0 && dx < 0.26 && dy > 0.16 && dy < 0.7) zone = 2;
-            else if (dx < 0.34 && dy > 0.14 && dy < 0.68) zone = 1;
-            else zone = 3;
-            break;
-          case "小鸟":
-            if (c < size * 0.22 && dy > 0.36 && dy < 0.58) zone = 0;
-            else if (dx < 0.16 && dy > 0.26 && dy < 0.74) zone = 1;
-            else if (dy > 0.52 && dx < 0.24) zone = 2;
-            else zone = 3;
-            break;
-          default:
-            zone = Math.min(palette.length - 1, Math.floor((r / size) * palette.length));
-        }
-
-        map[r][c] = pick(zone);
-      }
-    }
-
-    return map;
   }
 
   function initNeeded(targetMap, level = 1, hardLevel = false) {
@@ -322,13 +340,16 @@
       });
     });
     const activeColors = COLOR_KEYS.filter((color) => counts[color] > 0);
-    const totalNeed = Math.min(84, 20 + level * 3 + Math.max(0, targetMap.length - 8) + (hardLevel ? 6 : 0));
+    const size = targetMap.length;
+    const sizeNeedBase = Math.round(18 + size * 2.4);
+    const levelNeedBoost = Math.min(42, level * 2);
+    const totalNeed = Math.min(240, sizeNeedBase + levelNeedBoost + (hardLevel ? 12 : 0));
     let assigned = 0;
     activeColors.forEach((color, index) => {
       const remainColors = activeColors.length - index - 1;
-      const weighted = Math.max(3, Math.round((counts[color] / filled) * totalNeed));
-      const maxAllowed = totalNeed - assigned - remainColors * 3;
-      needed[color] = Math.max(3, Math.min(weighted, maxAllowed));
+      const weighted = Math.max(5, Math.round((counts[color] / filled) * totalNeed));
+      const maxAllowed = totalNeed - assigned - remainColors * 5;
+      needed[color] = Math.max(5, Math.min(weighted, maxAllowed));
       assigned += needed[color];
     });
     return needed;
