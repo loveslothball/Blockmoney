@@ -2,8 +2,8 @@
   const G = window.BeanGame;
   const { app, refs } = G;
   const { COLOR_KEYS, COLORS, COLLECT_SIZE } = G.constants;
-  const { generateTargetMap, initNeeded, levelStepLimit, levelCraftTime, isHardLevel } = G.utils;
-  const { swap, findMatches, hasAnyMove, createBoard, collapse, isCollectDone, isCraftDone } = G.engine;
+  const { generateTargetMap, resizeMask, initNeeded, levelStepLimit, levelShowcaseDuration, isHardLevel } = G.utils;
+  const { swap, findMatches, hasAnyMove, createBoard, collapse, isCollectDone } = G.engine;
   const {
     updateRunStats,
     applyDifficultyUI,
@@ -31,7 +31,7 @@
     drawCraft,
     drawResources
   } = G.ui;
-  const { ensureAudio, sfxMatch, sfxCombo, sfxPlace, sfxFail, sfxSuccess, sfxHardAlert, sfxPhaseShift, startBgm, stopBgm, refreshBgm, updateSoundButton } =
+  const { ensureAudio, sfxMatch, sfxCombo, sfxFail, sfxSuccess, sfxHardAlert, sfxPhaseShift, startBgm, stopBgm, refreshBgm, updateSoundButton } =
     G.audioApi;
   const audio = G.audio;
   const isWechatBrowser = /MicroMessenger/i.test(navigator.userAgent);
@@ -375,18 +375,6 @@
     };
   }
 
-  function startCraftTimer() {
-    clearInterval(app.craftTimer);
-    app.craftTimer = setInterval(() => {
-      app.craftTime -= 1;
-      updateCraftTimer();
-      if (app.craftTime <= 0) {
-        clearInterval(app.craftTimer);
-        endRun("时间到，拼搭失败");
-      }
-    }, 1000);
-  }
-
   function resolveSpecialSwapCombo(a, b) {
     const types = [app.specials[a.r][a.c], app.specials[b.r][b.c]].sort().join("+");
     const mark = new Set([`${a.r},${a.c}`, `${b.r},${b.c}`]);
@@ -430,13 +418,54 @@
     toast(`${COLORS[color].name} 豆已经收齐`);
   }
 
+  function stopShowcaseAnimation() {
+    clearInterval(app.showcaseTimer);
+    app.showcaseTimer = null;
+  }
+
+  function startShowcaseAnimation() {
+    stopShowcaseAnimation();
+    const cells = [];
+    for (let r = 0; r < app.targetMap.length; r += 1) {
+      for (let c = 0; c < app.targetMap.length; c += 1) {
+        if (app.targetMap[r][c]) cells.push({ r, c, color: app.targetMap[r][c] });
+      }
+    }
+    const duration = levelShowcaseDuration(app.targetMap, app.hardLevel);
+    const tickMs = 34;
+    app.showcaseBatch = Math.max(1, Math.ceil(cells.length / Math.max(20, Math.round(duration / tickMs))));
+    if (!app.showcaseIndex) {
+      app.placed = Array.from({ length: app.craftSize }, () => Array(app.craftSize).fill(null));
+      drawCraft();
+      drawResources();
+    }
+    app.showcaseTimer = setInterval(() => {
+      const nextChunk = cells.slice(app.showcaseIndex, app.showcaseIndex + app.showcaseBatch);
+      nextChunk.forEach(({ r, c, color }) => {
+        app.placed[r][c] = color;
+      });
+      app.showcaseIndex += nextChunk.length;
+      drawCraft();
+      drawResources();
+      if (app.showcaseIndex >= cells.length) {
+        stopShowcaseAnimation();
+        app.locked = true;
+        refs.ironSweep.classList.add("play");
+        setTimeout(() => {
+          refs.ironSweep.classList.remove("play");
+          completeLevel();
+        }, 980);
+      }
+    }, tickMs);
+  }
+
   function pauseGame() {
-    if (app.paused || (app.phase !== "collect" && app.phase !== "craft")) return;
+    if (app.paused || (app.phase !== "collect" && app.phase !== "showcase")) return;
     app.paused = true;
-    if (app.phase === "craft") clearInterval(app.craftTimer);
+    if (app.phase === "showcase") stopShowcaseAnimation();
     app.locked = true;
     refs.pauseText.textContent =
-      app.phase === "craft" ? `当前是拼搭阶段，还剩 ${app.craftTime} 秒。` : `当前是收集阶段，还剩 ${app.steps} 步。`;
+      app.phase === "showcase" ? "当前是自动拼豆展示阶段，继续后会接着还原图案。" : `当前是收集阶段，还剩 ${app.steps} 步。`;
     refs.pauseLayer.classList.remove("hidden");
     updateActionButtons();
   }
@@ -446,7 +475,7 @@
     app.paused = false;
     refs.pauseLayer.classList.add("hidden");
     app.locked = false;
-    if (app.phase === "craft") startCraftTimer();
+    if (app.phase === "showcase") startShowcaseAnimation();
     updateActionButtons();
   }
 
@@ -508,33 +537,25 @@
     toast("棋盘已洗牌，继续找目标豆");
   }
 
-  function onPickColor(color) {
-    app.activeColor = color;
-    drawResources(onPickColor);
-  }
-
   function enterCraft() {
-    app.phase = "craft";
+    app.phase = "showcase";
     app.paused = false;
     clearWeakHint();
     app.staleTurns = 0;
-    app.hasCraftPlaced = false;
-    app.resources = { ...app.collected };
-    app.activeColor = COLOR_KEYS.find((k) => app.resources[k] > 0) || "red";
+    app.showcaseIndex = 0;
     refs.collectPhase.classList.add("phase-hidden");
     refs.craftPhase.classList.remove("phase-hidden");
-    refs.phaseLabel.textContent = `第${app.level}关${app.hardLevel ? " · 超难" : ""} · 拼搭图案`;
-    refs.craftPreviewTitle.textContent = `${app.currentAnimal}参考图`;
-    refs.craftPreviewText.textContent = `先补最亮的缺口区域，当前拼图尺寸 ${app.craftSize} x ${app.craftSize}`;
+    refs.phaseLabel.textContent = `第${app.level}关${app.hardLevel ? " · 超难" : ""} · 自动拼豆展示`;
+    refs.craftPreviewTitle.textContent = `${app.currentAnimal} 自动还原`;
+    refs.craftPreviewText.textContent = `已解锁 ${app.craftSize} x ${app.craftSize} 拼豆图，正在自动拼装。`;
     drawPatternGrid(refs.craftReference, app.targetMap, "mini-cell");
-    app.craftTime = levelCraftTime(app.targetMap, app.hardLevel);
     updateCraftTimer();
-    drawCraft(onCraftCell);
-    drawResources(onPickColor);
-    toast(`进入拼搭阶段，${app.craftTime} 秒内完成`);
+    drawCraft();
+    drawResources();
+    toast(`收集完成，开始自动拼出 ${app.currentAnimal}`);
     sfxPhaseShift("craft");
     refreshBgm();
-    startCraftTimer();
+    startShowcaseAnimation();
     updateActionButtons();
   }
 
@@ -750,56 +771,9 @@
     resolveBoard(matches);
   }
 
-  function onCraftCell(r, c, cellEl) {
-    if (app.phase !== "craft" || app.paused || app.locked) return;
-    const target = app.targetMap[r][c];
-    const placed = app.placed[r][c];
-
-    if (placed) {
-      app.placed[r][c] = null;
-      app.resources[placed] += 1;
-      drawCraft(onCraftCell);
-      drawResources(onPickColor);
-      return;
-    }
-
-    if (!target) {
-      toast("这里不需要放豆子");
-      return;
-    }
-
-    if (!app.activeColor || app.resources[app.activeColor] <= 0) {
-      toast("该颜色豆子不足");
-      return;
-    }
-
-    if (app.activeColor !== target) {
-      cellEl.classList.add("wrong");
-      setTimeout(() => cellEl.classList.remove("wrong"), 220);
-      toast("颜色不匹配");
-      return;
-    }
-
-    app.placed[r][c] = app.activeColor;
-    app.hasCraftPlaced = true;
-    app.resources[app.activeColor] -= 1;
-    sfxPlace();
-    drawCraft(onCraftCell);
-    drawResources(onPickColor);
-
-    if (isCraftDone(app)) {
-      app.locked = true;
-      clearInterval(app.craftTimer);
-      refs.ironSweep.classList.add("play");
-      setTimeout(() => {
-        refs.ironSweep.classList.remove("play");
-        completeLevel();
-      }, 900);
-    }
-  }
-
   function completeLevel() {
-    const bonus = 180 + app.level * 45 + app.steps * 15 + app.craftTime * 12;
+    const resolutionBonus = 140 + Math.round(app.craftSize * app.craftSize * 0.45);
+    const bonus = 120 + app.level * 40 + app.steps * 16 + resolutionBonus;
     addScore(bonus);
     app.clearedLevels += 1;
     const gallery = getGallery();
@@ -809,7 +783,7 @@
       level: app.level,
       size: app.craftSize,
       date: new Date().toLocaleDateString("zh-CN"),
-      map: app.targetMap.map((row) => [...row])
+      previewMap: resizeMask(app.targetMap, 16)
     });
     saveGallery(gallery);
     sfxSuccess();
@@ -828,11 +802,10 @@
   }
 
   function endRun(detail) {
-    const compareEnabled = app.phase === "craft";
     app.phase = "done";
     app.paused = false;
     app.locked = false;
-    clearInterval(app.craftTimer);
+    stopShowcaseAnimation();
     clearTimeout(app.levelTransitionTimer);
     clearTimeout(app.introOverlayTimer);
     clearTimeout(app.celebrationTimer);
@@ -847,21 +820,13 @@
     list.push(record);
     list.sort((a, b) => b.score - a.score || b.levels - a.levels);
     saveLeaderboard(list);
-    if (compareEnabled) {
-      refs.resultCompare.classList.remove("hidden");
-      drawPatternGrid(refs.answerGrid, app.targetMap, "compare-cell");
-      drawPatternGrid(refs.attemptGrid, app.targetMap, "compare-cell", app.placed);
-    } else {
-      refs.resultCompare.classList.add("hidden");
-      refs.answerGrid.innerHTML = "";
-      refs.attemptGrid.innerHTML = "";
-    }
+    refs.resultCompare.classList.add("hidden");
+    refs.answerGrid.innerHTML = "";
+    refs.attemptGrid.innerHTML = "";
     showFailureResult({
       badge: app.clearedLevels > 0 ? "挑战中断" : "首次尝试",
       title: app.clearedLevels > 0 ? "差一点就更远了" : "先热热身",
-      detail: compareEnabled
-        ? `${detail}。下方能看到目标图和你的拼图对比，再来一次会更稳。`
-        : `${detail}。本次通关 ${app.clearedLevels} 关，总分 ${app.score} 分。`,
+      detail: `${detail}。本次通关 ${app.clearedLevels} 关，总分 ${app.score} 分。`,
       score: app.score,
       levels: app.clearedLevels
     });
@@ -886,7 +851,7 @@
     app.targetMap = generated.map;
     app.currentAnimal = generated.animalName;
     app.craftSize = generated.size;
-    app.needed = initNeeded(app.targetMap);
+    app.needed = initNeeded(app.targetMap, app.level, app.hardLevel);
     app.collected = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
     app.completedGoals = { red: false, blue: false, green: false, yellow: false, purple: false };
     app.resources = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
@@ -898,8 +863,9 @@
     app.staleTurns = 0;
     app.hintMove = null;
     app.targetRuleWarned = false;
+    app.showcaseIndex = 0;
+    app.showcaseBatch = 1;
     app.placed = Array.from({ length: app.craftSize }, () => Array(app.craftSize).fill(null));
-    app.activeColor = null;
     app.locked = false;
     refs.phaseLabel.textContent = `第${app.level}关${app.hardLevel ? " · 超难" : ""} · 收集豆子`;
     refs.timerText.classList.remove("warn");
@@ -924,10 +890,7 @@
     drawProgress();
     renderBoard(onCellTap);
     refs.introTitle.textContent = `${app.currentAnimal}拼豆图`;
-    refs.introDesc.textContent = `${app.hardLevel ? "超难关" : "普通关"}：先收集再拼搭，拼豆时间 ${levelCraftTime(
-      app.targetMap,
-      app.hardLevel
-    )} 秒`;
+    refs.introDesc.textContent = `${app.hardLevel ? "超难关" : "普通关"}：先收集目标豆，完成后自动还原 ${app.craftSize}x${app.craftSize} 拼豆图`;
     if (app.hardLevel) sfxHardAlert();
     sfxPhaseShift("collect");
     refreshBgm();
@@ -948,7 +911,7 @@
   }
 
   function resetGame() {
-    clearInterval(app.craftTimer);
+    stopShowcaseAnimation();
     app.paused = false;
     app.comboChain = 0;
     clearTimeout(app.comboTimer);
@@ -964,7 +927,7 @@
     app.phase = "idle";
     app.paused = false;
     app.hardLevel = false;
-    clearInterval(app.craftTimer);
+    stopShowcaseAnimation();
     clearTimeout(app.levelTransitionTimer);
     clearTimeout(app.introOverlayTimer);
     clearTimeout(app.celebrationTimer);

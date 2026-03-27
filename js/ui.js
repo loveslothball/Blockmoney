@@ -15,7 +15,7 @@
   }
 
   function updateActionButtons() {
-    const running = app.phase === "collect" || app.phase === "craft";
+    const running = app.phase === "collect" || app.phase === "showcase";
     refs.pauseBtn.classList.toggle("hidden", !running);
     refs.restartGameBtn.classList.toggle("hidden", !running);
     if (refs.shuffleBtn) {
@@ -36,8 +36,8 @@
   }
 
   function updateCraftTimer() {
-    refs.timerText.textContent = `倒计时 ${app.craftTime}s`;
-    refs.timerText.classList.toggle("warn", app.craftTime <= 8);
+    refs.timerText.textContent = app.phase === "showcase" ? "展示中" : refs.timerText.textContent;
+    refs.timerText.classList.remove("warn");
   }
 
   function toast(msg) {
@@ -305,33 +305,23 @@
     app.boardFx = Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(0));
   }
 
-  function drawCraft(onCraftCell) {
+  function drawCraft() {
     const size = app.targetMap.length;
-    const remainByColor = Object.fromEntries(COLOR_KEYS.map((k) => [k, 0]));
-    let remainingSlots = 0;
+    let filledSlots = 0;
+    let totalSlots = 0;
     for (let r = 0; r < size; r += 1) {
       for (let c = 0; c < size; c += 1) {
         const target = app.targetMap[r][c];
-        if (target && app.placed[r][c] !== target) {
-          remainByColor[target] += 1;
-          remainingSlots += 1;
-        }
+        if (!target) continue;
+        totalSlots += 1;
+        if (app.placed[r][c] === target) filledSlots += 1;
       }
     }
-    const focusColor = app.activeColor && remainByColor[app.activeColor] > 0
-      ? app.activeColor
-      : COLOR_KEYS.reduce((best, key) => (remainByColor[key] > (remainByColor[best] || 0) ? key : best), COLOR_KEYS[0]);
-    const focusCount = remainByColor[focusColor] || 0;
-    refs.craftPreviewText.textContent = `还差 ${remainingSlots} 块，优先补 ${COLORS[focusColor].name} 色区域`;
-    if (remainingSlots === 0) {
-      refs.craftPreviewHint.textContent = "完工啦，马上进入通关动画。";
-    } else if (remainingSlots <= 4) {
-      refs.craftPreviewHint.textContent = "快完成了，收尾时盯住高亮缺口。";
-    } else if (!app.hasCraftPlaced) {
-      refs.craftPreviewHint.textContent = `首次落子建议：先点 ${COLORS[focusColor].name} 色高亮格，当前还差 ${focusCount} 块。`;
-    } else {
-      refs.craftPreviewHint.textContent = `当前最缺 ${COLORS[focusColor].name} 色，还差 ${focusCount} 块。`;
-    }
+    refs.craftPreviewText.textContent = `自动拼豆中：${filledSlots}/${totalSlots} 块 · 画布 ${size}x${size}`;
+    refs.craftPreviewHint.textContent =
+      filledSlots >= totalSlots
+        ? "拼豆图已经还原完成，正在准备过关结算。"
+        : "收集到的豆子会自动铺成图案，这一段是通关奖励展示。";
     refs.craftGrid.style.setProperty("--grid-size", size);
     refs.craftGrid.dataset.gridSize = String(size);
     refs.craftGrid.innerHTML = "";
@@ -339,16 +329,9 @@
       for (let c = 0; c < size; c += 1) {
         const target = app.targetMap[r][c];
         const placed = app.placed[r][c];
-        const cell = document.createElement("button");
-        cell.type = "button";
+        const cell = document.createElement("div");
         cell.className = "craft-cell" + (target ? " target" : "");
-        cell.dataset.r = r;
-        cell.dataset.c = c;
-        cell.onclick = () => onCraftCell(r, c, cell);
-        const label = target ? `目标格${r + 1}-${c + 1}，需要${COLORS[target].name}` : `空白格${r + 1}-${c + 1}`;
-        cell.setAttribute("aria-label", label);
         if (target) cell.style.background = COLORS[target].soft;
-        if (target && !placed && target === focusColor) cell.classList.add("focus-gap");
 
         if (placed) {
           const bean = document.createElement("div");
@@ -366,18 +349,25 @@
     }
   }
 
-  function drawResources(onPickColor) {
-    refs.resourcePanel.innerHTML = "";
-    COLOR_KEYS.forEach((k) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "resource-btn" + (app.activeColor === k ? " active" : "");
-      btn.disabled = app.resources[k] <= 0;
-      btn.onclick = () => onPickColor(k);
-      btn.setAttribute("aria-label", `${COLORS[k].name}色豆子，剩余${app.resources[k]}个`);
-      btn.innerHTML = `<div class="dot" style="background:${COLORS[k].hex}"></div><strong>${app.resources[k]}</strong><div style="font-size:12px;color:var(--ink-soft)">${COLORS[k].name}</div>`;
-      refs.resourcePanel.appendChild(btn);
-    });
+  function drawResources() {
+    const total = app.targetMap.reduce((sum, row) => sum + row.filter(Boolean).length, 0);
+    refs.resourcePanel.innerHTML = `
+      <div class="resource-btn active" aria-label="自动拼豆信息">
+        <div class="dot" style="background:var(--gold)"></div>
+        <strong>${app.craftSize}x${app.craftSize}</strong>
+        <div style="font-size:12px;color:var(--ink-soft)">拼豆分辨率</div>
+      </div>
+      <div class="resource-btn active" aria-label="自动拼豆进度">
+        <div class="dot" style="background:var(--celebrate)"></div>
+        <strong>${app.showcaseIndex}</strong>
+        <div style="font-size:12px;color:var(--ink-soft)">当前已还原</div>
+      </div>
+      <div class="resource-btn active" aria-label="图案总像素数">
+        <div class="dot" style="background:var(--blue)"></div>
+        <strong>${total}</strong>
+        <div style="font-size:12px;color:var(--ink-soft)">图案像素</div>
+      </div>
+    `;
   }
 
   function renderGallery() {
@@ -393,7 +383,7 @@
       card.className = "history-card";
       const grid = document.createElement("div");
       grid.className = "mini-grid";
-      drawPatternGrid(grid, item.map, "mini-cell");
+      drawPatternGrid(grid, item.previewMap || item.map, "mini-cell");
       const meta = document.createElement("div");
       meta.className = "history-meta";
       meta.innerHTML = `<strong>${item.name}</strong><span>Lv.${item.level} · ${item.size}x${item.size}</span><span>${item.date}</span>`;

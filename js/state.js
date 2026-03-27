@@ -106,9 +106,8 @@
   }
 
   function chooseCraftSize(level) {
-    if (level >= 8) return 12;
-    if (level >= 4) return 10;
-    return 8;
+    const sizes = [8, 12, 16, 24, 32, 40, 48, 56, 64];
+    return sizes[Math.min(sizes.length - 1, Math.floor((level - 1) / 2))];
   }
 
   const app = {
@@ -135,9 +134,9 @@
     resources: {},
     placed: [],
     activeColor: null,
-    hasCraftPlaced: false,
-    craftTime: 48,
-    craftTimer: null,
+    showcaseIndex: 0,
+    showcaseBatch: 1,
+    showcaseTimer: null,
     levelTransitionTimer: null,
     introOverlayTimer: null,
     storageWarned: false,
@@ -311,33 +310,38 @@
     return map;
   }
 
-  function initNeeded(targetMap) {
+  function initNeeded(targetMap, level = 1, hardLevel = false) {
     const needed = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
+    const counts = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0 };
+    let filled = 0;
     targetMap.forEach((row) => {
       row.forEach((c) => {
-        if (c) needed[c] += 1;
+        if (!c) return;
+        counts[c] += 1;
+        filled += 1;
       });
+    });
+    const activeColors = COLOR_KEYS.filter((color) => counts[color] > 0);
+    const totalNeed = Math.min(84, 20 + level * 3 + Math.max(0, targetMap.length - 8) + (hardLevel ? 6 : 0));
+    let assigned = 0;
+    activeColors.forEach((color, index) => {
+      const remainColors = activeColors.length - index - 1;
+      const weighted = Math.max(3, Math.round((counts[color] / filled) * totalNeed));
+      const maxAllowed = totalNeed - assigned - remainColors * 3;
+      needed[color] = Math.max(3, Math.min(weighted, maxAllowed));
+      assigned += needed[color];
     });
     return needed;
   }
 
   function levelStepLimit(level) {
-    return START_STEPS + Math.min(8, Math.floor((level - 1) / 2));
+    return START_STEPS + Math.min(10, Math.floor((level - 1) / 2));
   }
 
-  function levelCraftTime(targetMap, hardLevel = false) {
-    let filled = 0;
-    const activeColors = new Set();
-    targetMap.forEach((row) => {
-      row.forEach((cell) => {
-        if (!cell) return;
-        filled += 1;
-        activeColors.add(cell);
-      });
-    });
+  function levelShowcaseDuration(targetMap, hardLevel = false) {
     const gridSize = targetMap.length;
-    const base = 18 + Math.round(filled * 0.36) + activeColors.size * 2 + Math.max(0, gridSize - 8) * 5;
-    return base + (hardLevel ? 8 : 0);
+    const base = 1200 + Math.max(0, gridSize - 8) * 42;
+    return base + (hardLevel ? 260 : 0);
   }
 
   function randomColor() {
@@ -361,9 +365,10 @@
     isHardLevel,
     pickAnimal,
     generateTargetMap,
+    resizeMask,
     initNeeded,
     levelStepLimit,
-    levelCraftTime,
+    levelShowcaseDuration,
     randomColor,
     chooseCraftSize
   };

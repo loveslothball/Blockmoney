@@ -548,6 +548,28 @@
         padding: 6px;
       }
 
+      .craft-grid[data-grid-size="16"] {
+        width: min(100%, 404px);
+        gap: 2px;
+        padding: 5px;
+      }
+
+      .craft-grid[data-grid-size="24"] {
+        width: min(100%, 404px);
+        gap: 1px;
+        padding: 5px;
+      }
+
+      .craft-grid[data-grid-size="32"],
+      .craft-grid[data-grid-size="40"],
+      .craft-grid[data-grid-size="48"],
+      .craft-grid[data-grid-size="56"],
+      .craft-grid[data-grid-size="64"] {
+        width: min(100%, 404px);
+        gap: 1px;
+        padding: 4px;
+      }
+
       .craft-cell {
         display: grid;
         place-items: center;
@@ -581,7 +603,7 @@
       .resource-panel {
         padding: 10px;
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 8px;
       }
 
@@ -1460,6 +1482,21 @@
           gap: 1px;
           padding: 4px;
         }
+        .craft-grid[data-grid-size="16"] {
+          width: min(100%, calc(100dvh - 460px));
+          gap: 1px;
+          padding: 4px;
+        }
+        .craft-grid[data-grid-size="24"],
+        .craft-grid[data-grid-size="32"],
+        .craft-grid[data-grid-size="40"],
+        .craft-grid[data-grid-size="48"],
+        .craft-grid[data-grid-size="56"],
+        .craft-grid[data-grid-size="64"] {
+          width: min(100%, calc(100dvh - 470px));
+          gap: 1px;
+          padding: 3px;
+        }
         .cell,
         .craft-cell {
           border-width: 1px;
@@ -1569,9 +1606,9 @@
           <div class="craft-preview panel">
             <div class="mini-grid" id="craftReference"></div>
             <div class="craft-preview-copy">
-              <strong id="craftPreviewTitle">参考图</strong>
-              <span id="craftPreviewText">照着目标图把颜色豆放进对应位置。</span>
-              <em id="craftPreviewHint">先选一种颜色，再点到对应的空位里。</em>
+              <strong id="craftPreviewTitle">拼豆奖励展示</strong>
+              <span id="craftPreviewText">收集完成后，系统会自动把这张图一点点还原出来。</span>
+              <em id="craftPreviewHint">分辨率越高，结算展示会越细腻。</em>
             </div>
           </div>
           <div class="board-wrap panel">
@@ -1627,12 +1664,12 @@
       <div class="overlay menu-overlay hidden" id="helpLayer">
         <div class="overlay-card">
           <h2>玩法说明</h2>
-          <p>先收集颜色豆，再按目标图把小动物拼出来。</p>
+          <p>先完成收集，再看拼豆图自动出炉。</p>
           <div class="help-copy">
-            <div><strong>阶段一：</strong>点击两个相邻豆子交换，凑成三个及以上同色即可消除并收集。</div>
-            <div><strong>阶段二：</strong>选择下方颜色豆，放到对应的目标格里，颜色必须完全匹配。</div>
-            <div><strong>失败条件：</strong>步数耗尽、棋盘无可走步，或拼搭倒计时结束。</div>
-            <div><strong>技巧：</strong>优先凑目标里缺得最多的颜色，超难关会在每 5 关出现。</div>
+            <div><strong>阶段一：</strong>交换相邻豆子，优先消掉带星目标豆，只有目标豆才会计入收集。</div>
+            <div><strong>阶段二：</strong>收集完成后会进入自动拼豆展示，系统会把当前小动物图一点点还原出来。</div>
+            <div><strong>失败条件：</strong>步数耗尽，或棋盘没有可走步且洗牌次数也用完。</div>
+            <div><strong>技巧：</strong>优先处理最缺颜色和带状态的目标豆，关卡越高，自动展示的拼豆图分辨率也越高。</div>
           </div>
           <div class="menu-actions">
             <button id="closeHelpBtn" class="menu-btn" type="button">知道了</button>
