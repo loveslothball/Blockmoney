@@ -155,6 +155,7 @@
     hardLevel: false,
     steps: START_STEPS,
     targetMap: [],
+    previewMap: [],
     craftSize: 8,
     board: [],
     boardFx: Array.from({ length: COLLECT_SIZE }, () => Array(COLLECT_SIZE).fill(0)),

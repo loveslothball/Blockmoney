@@ -206,7 +206,7 @@
 
       .target-row {
         display: grid;
-        grid-template-columns: 96px 1fr;
+        grid-template-columns: 126px 1fr;
         gap: 10px;
       }
 
@@ -228,10 +228,21 @@
         height: 70px;
         display: grid;
         grid-template-columns: repeat(var(--grid-size), 1fr);
-        gap: 2px;
+        gap: var(--mini-gap, 2px);
         background: #8f8a9e;
         border-radius: 2px;
         overflow: hidden;
+      }
+
+      #miniTarget,
+      #craftReference {
+        width: 104px;
+        height: 104px;
+      }
+
+      #overlayMini {
+        width: 132px;
+        height: 132px;
       }
 
       .mini-cell {
@@ -1475,15 +1486,24 @@
           justify-content: flex-start;
         }
         .target-row {
-          grid-template-columns: 78px 1fr;
+          grid-template-columns: 96px 1fr;
         }
         .craft-preview {
-          grid-template-columns: 68px 1fr;
+          grid-template-columns: 86px 1fr;
           padding: 8px;
         }
         .mini-grid {
           width: 58px;
           height: 58px;
+        }
+        #miniTarget,
+        #craftReference {
+          width: 82px;
+          height: 82px;
+        }
+        #overlayMini {
+          width: 96px;
+          height: 96px;
         }
         .progress-board {
           grid-template-columns: repeat(5, minmax(0, 1fr));

@@ -183,12 +183,15 @@
   }
 
   function drawMini(gridEl) {
-    drawPatternGrid(gridEl, app.targetMap, "mini-cell");
+    drawPatternGrid(gridEl, app.previewMap?.length ? app.previewMap : app.targetMap, "mini-cell");
   }
 
   function drawPatternGrid(gridEl, map, baseClass = "mini-cell", attemptMap = null) {
     const size = map.length;
     gridEl.style.setProperty("--grid-size", size);
+    if (baseClass === "mini-cell") {
+      gridEl.style.setProperty("--mini-gap", size >= 22 ? "1px" : "2px");
+    }
     gridEl.innerHTML = "";
     for (let r = 0; r < size; r += 1) {
       for (let c = 0; c < size; c += 1) {

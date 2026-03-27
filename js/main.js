@@ -120,7 +120,7 @@
     }
     const firstPass = await renderCustomMapFromSource(app.customImageSource, size, false);
     let finalMap = firstPass.map;
-    if (firstPass.filled < size * size * 0.12) {
+    if (firstPass.filled < size * size * 0.3) {
       const secondPass = await renderCustomMapFromSource(app.customImageSource, size, true);
       finalMap = secondPass.map;
     }
@@ -670,7 +670,7 @@
     refs.phaseLabel.textContent = `第${app.level}关${app.hardLevel ? " · 超难" : ""} · 自动拼豆展示`;
     refs.craftPreviewTitle.textContent = `${app.currentAnimal} 自动还原`;
     refs.craftPreviewText.textContent = `已解锁 ${app.craftSize} x ${app.craftSize} 拼豆图，正在自动拼装。`;
-    drawPatternGrid(refs.craftReference, app.targetMap, "mini-cell");
+    drawPatternGrid(refs.craftReference, app.previewMap?.length ? app.previewMap : app.targetMap, "mini-cell");
     updateCraftTimer();
     drawCraft();
     drawResources();
@@ -984,6 +984,7 @@
       generated = generateTargetMap(app.level);
     }
     app.targetMap = generated.map;
+    app.previewMap = app.targetMap.length > 24 ? resizeMask(app.targetMap, 24) : app.targetMap.map((row) => [...row]);
     app.currentAnimal = generated.animalName;
     app.craftSize = generated.size;
     app.needed = initNeeded(app.targetMap, app.level, app.hardLevel);
